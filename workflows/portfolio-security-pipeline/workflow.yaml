@@ -1,0 +1,103 @@
+name: Avenirs Portfolio Security Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      app_url:
+        required: true
+        type: string
+      fixtures_path:
+        required: false
+        type: string
+        default: src/test/resources/db/load-test-fixtures.sql
+    secrets:
+      POSTGRES_USER:
+        required: true
+      POSTGRES_PASSWORD:
+        required: true
+      POSTGRES_DB:
+        required: true
+      JASYPT_ENCRYPTOR_PASSWORD:
+        required: true
+      LDAP_ADMIN_PASSWORD:
+        required: true
+      LDAP_ADMIN:
+        required: true
+      LDAP_BASE_DN:
+        required: true
+      GITHUB_TOKEN:
+        required: true
+
+jobs:
+  avenir-ci:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      JASYPT_ENCRYPTOR_PASSWORD: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
+      LDAP_ADMIN_PASSWORD: ${{ secrets.LDAP_ADMIN_PASSWORD }}
+      LDAP_ADMIN: ${{ secrets.LDAP_ADMIN }}
+      LDAP_BASE_DN: ${{ secrets.LDAP_BASE_DN }}
+      AVENIRS_APP_URL: ${{ inputs.app_url }}
+      AVENIRS_LOAD_TESTS_FIXTURES: ${{ inputs.fixtures_path }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Docker network
+        run: docker network create avenirs-network
+
+      - name: Setup PostgreSQL
+        uses: ./actions/setup-postgres
+        with:
+          jasypt_password: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
+          postgres_db: ${{ secrets.POSTGRES_DB }}
+          postgres_user: ${{ secrets.POSTGRES_USER }}
+          postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+
+      - name: Setup OpenLDAP
+        uses: ./actions/setup-openldap
+        with:
+          ldap_base_dn: ${{ env.LDAP_BASE_DN }}
+          ldap_admin: ${{ env.LDAP_ADMIN }}
+          ldap_admin_password: ${{ env.LDAP_ADMIN_PASSWORD }}
+          disable_fixtures: true
+
+      - name: Setup CAS
+        uses: ./actions/setup-cas
+        with:
+          rebuild: false
+
+      - name: Run Unit Tests & Coverage
+        uses: ./actions/unit-tests-and-code-coverage
+
+      - name: Start Spring Boot App
+        uses: ./actions/spring-boot-app/start
+        with:
+          app_url: ${{ inputs.app_url }}
+
+      - name: Inject Fixtures (Fake data)
+        uses: ./actions/fixtures/faker
+        with:
+          ldap_admin: ${{ env.LDAP_ADMIN }}
+          ldap_admin_password: ${{ env.LDAP_ADMIN_PASSWORD }}
+
+      - name: Load Tests
+        uses: ./actions/load-tests
+        with:
+          fixtures: ${{ inputs.fixtures_path }}
+          app_url: ${{ inputs.app_url }}
+
+      - name: Stop Spring Boot App
+        uses: ./actions/spring-boot-app/stop
+        with:
+          app_url: ${{ inputs.app_url }}
+
+      - name: Publish Reports to GitHub Pages
+        uses: ./actions/publish-to-gh-pages
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/site

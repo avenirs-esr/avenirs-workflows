@@ -1,0 +1,117 @@
+name: "Setup Postgresql"
+description: "Initializes Postgresql environment"
+inputs:
+  jasypt_password:
+    description: "Jasypt encryption password"
+    required: true
+  postgres_db:
+    description: "Postgres database"
+    required: true
+  postgres_user:
+    description: "Postgres user"
+    required: true
+  postgres_password:
+    description: "Postgres user password"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Get Remote digest
+      id: get_remote_digest
+      run: |
+            REMOTE_DIGEST=$(docker manifest inspect postgres:latest | jq -r '.manifests[0].digest' 2>/dev/null || echo "none")
+            echo "REMOTE_DIGEST: $REMOTE_DIGEST"
+            echo "REMOTE_DIGEST=$REMOTE_DIGEST" >> $GITHUB_ENV
+            echo "REMOTE_DIGEST=$REMOTE_DIGEST" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Cache Docker Images for Postgresql
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.docker-cache-postgres
+        key: docker-postgres-cache-${{ steps.get_remote_digest.outputs.REMOTE_DIGEST }}
+        restore-keys: |
+          docker-postgres-
+
+    - name: Ensure Cache Directory Exists
+      run: |
+        mkdir -p /tmp/.docker-cache-postgres
+        echo "Cache directory ensured: /tmp/.docker-cache-postgres"
+      shell: bash
+
+    - name: Load Postgresql Image from Cache
+      run: |
+        if [ -f /tmp/.docker-cache-postgres/postgres.tar ]; then
+          echo "Loading Postgresql image from cache..."
+          docker load -i /tmp/.docker-cache-postgres/postgres.tar
+           echo "Postgresql image loaded from cache."
+        else
+          echo "No cached Postgresql image found."
+        fi
+      shell: bash
+
+    - name: Check for Updates or Missing Postgresql Image
+      run: |
+        LOCAL_DIGEST=$(cat /tmp/.docker-cache-postgres/digest 2>/dev/null || echo "none")
+        echo "Local Digest: $LOCAL_DIGEST"
+        echo "Remote Digest: $REMOTE_DIGEST"
+        if [ "$LOCAL_DIGEST" != "$REMOTE_DIGEST" ] || [ "$LOCAL_DIGEST" == "none" ]; then
+          echo "Pulling updated Postgresql Docker image..."
+          docker pull postgres:latest
+          echo "$REMOTE_DIGEST" > /tmp/.docker-cache-postgres/digest
+          docker save postgres:latest -o /tmp/.docker-cache-postgres/postgres.tar
+          echo "Postgresql image pulled and saved to cache."
+        else
+          echo "Postgresql image is up-to-date and loaded from cache."
+        fi
+      shell: bash
+
+    - name: Start Postgresql Container
+      run: |
+        echo "Starting Postgresql Docker container..."
+        docker run -d --name avenirs-postgres \
+          --network avenirs-network \
+          -e POSTGRES_USER=${{inputs.postgres_user}} \
+          -e POSTGRES_PASSWORD=${{inputs.postgres_password}} \
+          -e POSTGRES_DB=${{inputs.postgres_db}} \
+          -p 65432:5432 \
+          postgres:latest
+      shell: bash
+
+    - name: Wait for Postgresql to be ready
+      run: |
+        echo "Waiting for Postgresql to be ready..."
+        for i in {1..4}; do
+          if docker exec avenirs-postgres pg_isready -U ${{inputs.postgres_user}} -h localhost -p 5432; then
+            echo "Postgresql is ready."
+            break
+          fi
+          echo "Postgresql is not ready yet... retrying in 5 seconds."
+          sleep 5
+        done
+      shell: bash
+
+    - name: Initialize Database
+      run: |
+        for FILE in src/main/resources/db/init-db.sql src/test/resources/db/init-test-db.sql; do \
+          if [ -f "$FILE" ]; then \
+            encrypted=$(grep -o 'ENC([A-Za-z0-9+/=]*)' "$FILE" | sed -E 's/ENC\((.*)\)/\1/'); \
+            if [ -n "$encrypted" ]; then \
+              decrypted=$(java -cp .github/lib/jasypt-1.9.3.jar org.jasypt.intf.cli.JasyptPBEStringDecryptionCLI input="$encrypted" password=${{inputs.jasypt_password}} algorithm=PBEWithMD5AndDES | grep -v '^$' | tail -n 1); \
+
+              if [ -n "$decrypted" ]; then \
+                echo "Decryption successful for $FILE"; \
+                sed "s|ENC($encrypted)|$decrypted|" "$FILE" | docker exec -i avenirs-postgres psql -U ${{inputs.postgres_user}} -d template1; \
+              else \
+                echo "Decryption failed for $FILE: No decrypted value returned. Please check the encrypted string or password."; \
+                exit 1; \
+              fi; \
+            else \
+              echo "No encrypted value found in $FILE"; \
+            fi; \
+          else \
+            echo "File $FILE not found"; \
+            exit 1; \
+          fi; \
+        done
+      shell: bash

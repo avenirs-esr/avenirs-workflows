@@ -1,0 +1,18 @@
+name: "Dump Environment"
+description: "Dumps the current environment variables for debugging"
+inputs:
+  disabled:
+    description: "Determines if the dump-env action is disabled"
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Dump Environment Variables
+      if: ${{ inputs.disabled == 'false' }}
+      working-directory: ${{ github.workspace }}
+      run: |
+        echo "Dumping all environment variables:"
+        env | sort
+      shell: bash

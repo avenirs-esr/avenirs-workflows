@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation Avenirs Portfolio Security</title>
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color:white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            color: white;
+            border-bottom: 1px solid #3498db;
+        }
+        header img {
+            max-height: 80px;
+            margin-right: 20px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2em;
+            color: #3498db;
+            width: 100%;
+            margin-right: 100px;
+        }
+        .content {
+            padding: 20px;
+        }
+        .content h2 {
+            font-size: 1.5em;
+        }
+
+        .content h3 {
+            font-size: 1em;
+            color: grey;
+            margin: 30px 0 0 15x
+        }
+        .content ul {
+            list-style-type: none;
+            padding: 0 0 0 15px;
+        }
+        .content ul li {
+            margin: 10px 0;
+        }
+        .content ul li a {
+            text-decoration: none;
+            color: #3498db;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="assets/images/avenirs-esr-logo_medium.jpg" alt="Logo Avenirs-ESR">
+        <h1>Avenirs Portfolio Security</h1>
+    </header>
+    <div class="content">
+        <h2>Documentation et Rapports</h2>
+        <ul>
+            <li><a href="apidocs/index.html" target="_blank">Documentation Javadoc</a></li>
+            <li><a href="jacoco/index.html" target="_blank">Rapport de couverture des tests (JaCoCo)</a></li>
+        </ul>
+        <h3>Tests de charge</h3>
+
+        <ul>
+            <li><a href="locust_report.html" target="_blank">Rapport</a></li>
+            <li><a href="locust_report_stats.csv" target="_blank">Statistiques</a></li>
+            <li><a href="locust_report_stats.csv" target="_blank">Rapport d'erreur</a></li>
+        </ul>
+    </div>
+</body>
+</html>

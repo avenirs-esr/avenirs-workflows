@@ -1,0 +1,37 @@
+name: "Start Spring boot app"
+description: "Start and check that a Spring boot application is running"
+inputs:
+    app_url:
+      description: "Application url"
+      required: true
+runs:
+  using: "composite"
+
+  steps:
+    - name: Start Spring Boot Application
+      run: |
+        ./mvnw spring-boot:run & echo $! > spring-boot.pid
+      env:
+        SPRING_PROFILES_ACTIVE: dev
+      shell: bash
+
+    - name: Wait for Application to be Ready
+      run: |
+        echo "Waiting for Application to be ready..."
+        sleep 20
+        set +e
+        for i in {1..10}; do
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{inputs.app_url}}/actuator/health)
+          if [ "$STATUS" -eq 200 ]; then
+            echo "Application is ready."
+            break
+          fi
+          echo "Application is not ready yet... retrying in 10 seconds. Current status: $STATUS"
+          sleep 10
+        done
+        
+        if [ "$STATUS" -ne 200 ]; then
+          echo "Application failed to start after 10 attempts."
+          exit 1
+        fi
+      shell: bash

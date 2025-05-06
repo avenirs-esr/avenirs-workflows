@@ -1,0 +1,138 @@
+name: "Setup OpenLDAP"
+description: "Initializes OpenLDAP environment"
+inputs:
+  ldap_base_dn:
+    description: "LDAP Base DN"
+    required: true
+  ldap_admin:
+    description: "LDAP Admin"
+    required: true
+  ldap_admin_password:
+    description: "LDAP Admin password"
+    required: true
+  ldap_organisation:
+    description: "LDAP Organisation"
+    required: false
+    default: "avenirs-esr.fr"
+  ldap_domain:
+    description: "LDAP Domain"
+    required: false
+    default: "ldap-dev.avenirs-esr.fr"
+  ldap_log_level:
+      description: "LDAP Log level"
+      required: false
+      default: "256"
+  ldap_fixtures:
+    description: "LDAP fixtures"
+    required: false
+    default: ".github/actions/setup-openldap/settings/openldap-fixtures.ldif"
+  disable_fixtures:
+    description: "Flag to disable fixtures"
+    required: false
+    default: "false"
+  docker_image_version:
+    description: "LDAP docker image version"
+    required: false
+    default: "latest"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get Remote digest
+      id: get_remote_digest
+      run: |
+        REMOTE_DIGEST=$(docker manifest inspect osixia/openldap:${{inputs.docker_image_version}} | jq -r '.manifests[0].digest' 2>/dev/null || echo "none")
+        echo "REMOTE_DIGEST: $REMOTE_DIGEST"
+        echo "REMOTE_DIGEST=$REMOTE_DIGEST" >> $GITHUB_ENV
+        echo "REMOTE_DIGEST=$REMOTE_DIGEST" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Cache Docker Images for OpenLDAP
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.docker-cache-openldap
+        key: docker-openldap-cache-${{ steps.get_remote_digest.outputs.REMOTE_DIGEST }}-${{ hashFiles('.github/actions/setup-openldap/settings/**') }}
+        restore-keys: |
+          docker-openldap-
+
+    - name: Ensure Cache Directory Exists
+      run: |
+        mkdir -p /tmp/.docker-cache-openldap
+        echo "Cache directory ensured: /tmp/.docker-cache-openldap"
+      shell: bash
+
+    - name: Load OpenLDAP Image from Cache
+      run: |
+        if [ -f /tmp/.docker-cache-openldap/openldap.tar ]; then
+          echo "Loading OpenLDAP image from cache..."
+          docker load -i /tmp/.docker-cache-openldap/openldap.tar
+          echo "OpenLDAP image loaded from cache."
+        else
+          echo "No cached OpenLDAP image found."
+        fi
+      shell: bash
+
+    - name: Check for Updates or Missing OpenLDAP Image
+      run: |
+        LOCAL_DIGEST=$(cat /tmp/.docker-cache-openldap/digest 2>/dev/null || echo "none")
+        echo "Local Digest: $LOCAL_DIGEST"
+        echo "Remote Digest: $REMOTE_DIGEST"
+        if [ "$LOCAL_DIGEST" != "$REMOTE_DIGEST" ] || [ "$LOCAL_DIGEST" == "none" ]; then
+          echo "Pulling updated OpenLDAP Docker image..."
+          echo "$REMOTE_DIGEST" > /tmp/.docker-cache-openldap/digest
+          docker pull osixia/openldap:${{inputs.docker_image_version}}
+          docker save osixia/openldap:${{inputs.docker_image_version}} -o /tmp/.docker-cache-openldap/openldap.tar
+          echo "OpenLDAP image pulled and saved to cache."
+        else
+          echo "OpenLDAP image is up-to-date and loaded from cache."
+        fi
+      shell: bash
+
+    - name: Verify Image Loaded from Cache
+      run: |
+        if docker image inspect osixia/openldap:${{inputs.docker_image_version}} > /dev/null 2>&1; then
+          echo "OpenLDAP image successfully loaded from cache and available as 'osixia/openldap:${{inputs.docker_image_version}}'."
+        else
+          echo "OpenLDAP image not found after loading. Check the load step."
+          exit 1
+        fi
+      shell: bash
+
+    - name: Start OpenLDAP Container
+      run: |
+        docker run -d --name avenirs-openldap \
+        --network avenirs-network \
+          -e LDAP_ORGANISATION=${{inputs.ldap_organisation}} \
+          -e LDAP_DOMAIN=${{ inputs.ldap_domain }} \
+          -e LDAP_ADMIN_PASSWORD=${{inputs.ldap_admin_password}} \
+          -e LDAP_BASE_DN=${{inputs.ldap_base_dn}} \
+          -e LDAP_REMOVE_CONFIG_AFTER_SETUP="false" \
+          -p 389:389 -p 636:636 \
+          --env LDAP_TLS_VERIFY_CLIENT=never \
+          --env LDAP_LOG_LEVEL=${{inputs.ldap_log_level}} \
+        osixia/openldap:${{inputs.docker_image_version}}
+      shell: bash
+
+    - name: Copy LDIF File to Container
+      if: ${{ inputs.disable_fixtures == 'false' }}
+      run: docker cp ${{inputs.ldap_fixtures}} avenirs-openldap:/tmp/openldap-fixtures.ldif
+      shell: bash
+
+    - name: Wait for OpenLDAP to be ready
+      run: |
+        echo "Waiting for OpenLDAP to be ready..."
+        for i in {1..10}; do
+          if docker exec avenirs-openldap ldapsearch -x -H ldap://localhost:389 -D "${{inputs.ldap_admin}}" -w ${{inputs.ldap_admin_password}} -b ${{inputs.ldap_base_dn}} -s base "(objectclass=*)" > /dev/null 2>&1; then
+            echo "OpenLDAP is ready."
+            break
+          fi
+          echo "OpenLDAP is not ready yet... retrying in 5 seconds."
+          sleep 5
+        done
+      shell: bash
+
+    - name: Inject LDIF into LDAP
+      if: ${{ inputs.disable_fixtures == 'false' }}
+      run: |
+        docker exec avenirs-openldap ldapadd -x -D "${{inputs.ldap_admin}}" -w ${{inputs.ldap_admin_password}} -f /tmp/openldap-fixtures.ldif
+      shell: bash

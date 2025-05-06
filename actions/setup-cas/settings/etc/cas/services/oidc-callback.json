@@ -1,0 +1,22 @@
+{
+  "id": 4400,
+  "name": "APIM",
+  "@class": "org.apereo.cas.services.OidcRegisteredService",
+  "bypassApprovalPrompt": true,
+  "clientId": "OIDCClientId",
+  "clientSecret": "OIDCsecret2",
+  "supportedGrantTypes": [ "java.util.HashSet", [ "authorization_code", "refresh_token", "password" ] ],
+  "supportedResponseTypes": [ "java.util.HashSet", [ "code", "token" ] ],
+  "serviceId": "^https?://((srv-dev-avenirs?(\\.srv-avenirs?\\.brgm\\.recia\\.net)?)|localhost)/apisix-gw/oidc(/.*)*",
+  "jwtAccessToken": true,
+ 
+
+  "scopes": [
+    "java.util.HashSet",
+    [
+      "openid",
+      "profile",
+      "email"
+    ]
+  ]
+}

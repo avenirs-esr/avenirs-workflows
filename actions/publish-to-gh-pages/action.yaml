@@ -1,0 +1,40 @@
+name: "Publish Javadoc and Jacoco Reports"
+description: "Publish the Javadoc and coverage reports to GitHub Pages"
+
+inputs:
+  github_token:
+    description: "GitHub Token"
+    required: true
+  publish_dir:
+    description: "Directory to publish"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: (DEBUG) Check GITHUB_TOKEN
+      if: ${{ false }}
+      run: |
+        if [ -z "${{ inputs.github_token }}" ]; then
+          echo "Error: GITHUB_TOKEN is not set."
+          exit 1
+        else
+          echo "GITHUB_TOKEN is set."
+          echo "Token snippet: ${{ inputs.github_token }}" 
+        fi
+      shell: bash
+    
+    - name: Copy index page
+      run: |
+        mkdir -p ${{ inputs.publish_dir }}/assets/images
+        cp .github/actions/publish-to-gh-pages/index.html ${{ inputs.publish_dir }}/index.html
+        cp .github/actions/publish-to-gh-pages/assets/images/avenirs-esr-logo_medium.jpg ${{ inputs.publish_dir }}/assets/images/avenirs-esr-logo_medium.jpg
+        cp .github/actions/publish-to-gh-pages/assets/images/favicon.ico ${{ inputs.publish_dir }}/assets/images/favicon.ico
+        echo "Index file copied."
+      shell: bash
+    
+    - name: Publish Javadoc and Jacoco Reports to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ inputs.github_token }}
+        publish_dir: ${{ inputs.publish_dir }}
