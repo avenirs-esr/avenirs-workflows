@@ -1,0 +1,193 @@
+dn: ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: organizationalUnit
+objectClass: top
+ou: people
+description: People branch
+
+dn: uid=paterson,ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: PATERSON Joel
+uidNumber: 2000
+gidNumber: 3000
+homeDirectory: /home/perso/paterson
+sn: PATERSON
+uid: paterson
+gecos:  PATERSON Joel
+givenName: joel
+userPassword:{ssha}Ke8lVwbkuJcEbWdCur8XLG9QwggNciz6UlwH/w==
+mail:paterson@univ.fr
+
+dn: uid=paterson1,ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: PATERSON Sandrine
+uidNumber: 2001
+gidNumber: 3000
+homeDirectory: /home/perso/paterson1
+sn: PATERSON
+uid: paterson1
+gecos:  PATERSON Sandrine
+givenName: sandrine
+userPassword:{ssha}Ke8lVwbkuJcEbWdCur8XLG9QwggNciz6UlwH/w==
+mail:paterson1@univ.fr
+
+dn: uid=cuevas,ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: CUEVAS Candice
+uidNumber: 2002
+gidNumber: 3000
+homeDirectory: /home/perso/cuevas
+sn: CUEVAS
+uid: cuevas
+gecos:  CUEVAS Candice
+givenName: candice
+userPassword:{ssha}Ke8lVwbkuJcEbWdCur8XLG9QwggNciz6UlwH/w==
+mail:cuevas@univ.fr
+
+dn: uid=kramer,ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: KRAMER Ameera
+uidNumber: 2003
+gidNumber: 3000
+homeDirectory: /home/perso/kramer
+sn: KRAMER
+uid: kramer
+gecos:  KRAMER Ameera
+givenName: ameera
+userPassword:{ssha}Ke8lVwbkuJcEbWdCur8XLG9QwggNciz6UlwH/w==
+mail:kramer@univ.fr
+
+dn: uid=cervantes,ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: CERVANTES Camilla
+uidNumber: 2004
+gidNumber: 3000
+homeDirectory: /home/perso/cervantes
+sn: CERVANTES
+uid: cervantes
+gecos:  CERVANTES Camilla
+givenName: camilla
+userPassword:{ssha}Ke8lVwbkuJcEbWdCur8XLG9QwggNciz6UlwH/w==
+mail:cervantes@univ.fr
+
+dn: uid=terrell,ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: TERRELL Sarah
+uidNumber: 2005
+gidNumber: 3000
+homeDirectory: /home/perso/terrell
+sn: TERRELL
+uid: terrell
+gecos:  TERRELL Sarah
+givenName: sarah
+userPassword:{ssha}Ke8lVwbkuJcEbWdCur8XLG9QwggNciz6UlwH/w==
+mail:terrell@univ.fr
+
+dn: uid=rollins,ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: ROLLINS Leighton
+uidNumber: 2006
+gidNumber: 3000
+homeDirectory: /home/perso/rollins
+sn: ROLLINS
+uid: rollins
+gecos:  ROLLINS Leighton
+givenName: leighton
+userPassword:{ssha}Ke8lVwbkuJcEbWdCur8XLG9QwggNciz6UlwH/w==
+mail:rollins@univ.fr
+
+dn: uid=allison,ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: ALLISON Charlotte
+uidNumber: 2007
+gidNumber: 3000
+homeDirectory: /home/perso/allison
+sn: ALLISON
+uid: allison
+gecos:  ALLISON Charlotte
+givenName: charlotte
+userPassword:{ssha}Ke8lVwbkuJcEbWdCur8XLG9QwggNciz6UlwH/w==
+mail:allison@univ.fr
+
+dn: uid=deman,ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: DEMAN Arnaud
+uidNumber: 2008
+gidNumber: 3000
+homeDirectory: /home/perso/deman
+sn: DEMAN
+uid: deman
+gecos:  DEMAN Arnaud
+givenName: arnaud
+userPassword:{ssha}Ke8lVwbkuJcEbWdCur8XLG9QwggNciz6UlwH/w==
+mail:deman@univ.fr
+
+dn: uid=gribonvald,ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: GRIBONVALD Julien
+uidNumber: 2009
+gidNumber: 3000
+homeDirectory: /home/perso/gribonvald
+sn: GRIBONVALD
+uid: gribonvald
+gecos:  GRIBONVALD Julien
+givenName: julien
+userPassword:{ssha}Ke8lVwbkuJcEbWdCur8XLG9QwggNciz6UlwH/w==
+mail:gribonvald@univ.fr
+
+dn: uid=dugat,ou=people,dc=ldap-dev,dc=avenirs-esr,dc=fr
+objectClass: posixAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: DUGAT Ghislain
+uidNumber: 2010
+gidNumber: 3000
+homeDirectory: /home/perso/dugat
+sn: DUGAT
+uid: dugat
+gecos:  DUGAT Ghislain
+givenName: ghislain
+userPassword:{ssha}Ke8lVwbkuJcEbWdCur8XLG9QwggNciz6UlwH/w==
+mail:dugat@univ.fr
+
