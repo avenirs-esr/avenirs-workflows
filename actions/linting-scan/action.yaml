@@ -1,0 +1,46 @@
+name: "Code Formatting (Java, JavaScript, TypeScript)"
+description: "Vérifie et formate automatiquement le code Java avec google-java-format et JS/TS avec Prettier"
+inputs:
+  fail_if_unformatted:
+    description: "Echoue si du code n'est pas correctement formaté (true/false)"
+    required: false
+    default: "true"
+runs:
+  using: "composite"
+  steps:
+
+    - name: Install Google Java Format (Java)
+      uses: ./actions/setup-google-java-format
+
+    - name: Format Java Code (google-java-format)
+      run: |
+        if find . -name "*.java" | grep -q .; then
+          find . -name "*.java" -exec java -jar google-java-format.jar --replace {} \;
+          echo "Java code has been formatted using Google Java Format."
+        else
+          echo "No Java files found to format."
+        fi
+      shell: bash
+
+    - name: Install Prettier (JavaScript/TypeScript)
+      uses: ./actions/setup-prettier
+
+    - name: Format JavaScript/TypeScript Code (Prettier)
+      run: |
+        prettier --write "src/**/*.{js,jsx,ts,tsx}" || true
+        echo "JavaScript/TypeScript code has been formatted using Prettier."
+      shell: bash
+
+    - name: Check for Unformatted Code
+      run: |
+        echo "Vérification du format de code :"
+        if [ "$(git diff --name-only | grep -E '\.java|\.js|\.jsx|\.ts|\.tsx')" ]; then
+          echo "Du code non formaté a été détecté :"
+          git diff --name-only | grep -E '\.java|\.js|\.jsx|\.ts|\.tsx'
+          if [ "${{ inputs.fail_if_unformatted }}" == "true" ]; then
+            exit 1
+          fi
+        else
+          echo "Tout le code est correctement formaté."
+        fi
+      shell: bash

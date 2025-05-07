@@ -1,0 +1,10 @@
+name: "Setup Prettier"
+description: "Installe Prettier"
+runs:
+  using: "composite"
+  steps:
+    - name: Check if Prettier is already installed
+      run: |
+        npm install prettier -g
+        echo "Prettier installed for JS/TS formatting."
+      shell: bash
