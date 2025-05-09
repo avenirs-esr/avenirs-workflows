@@ -1,0 +1,56 @@
+name: Common Backend Workflow
+
+on:
+  workflow_call:
+    inputs:
+      run_lint:
+        type: boolean
+        default: true
+      run_security_scan:
+        type: boolean
+        default: true
+      run_test_coverage:
+        type: boolean
+        default: true
+      run_load_test:
+        type: boolean
+        default: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+  lint:
+    needs: setup
+    if: ${{ inputs.run_lint }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔎 Lint code
+        uses: ./actions/linting-scan
+
+  security_scan:
+    needs: setup
+    if: ${{ inputs.run_security_scan }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛡️ Security Scan
+        uses: ./actions/security-scan
+
+  test_coverage:
+    needs: setup
+    if: ${{ inputs.run_test_coverage }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🧪 Test Coverage
+        uses: ./actions/unit-tests-and-code-coverage
+
+  load_test:
+    needs: setup
+    if: ${{ inputs.run_load_test }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Load Test
+        uses: ./actions/load-tests
