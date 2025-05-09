@@ -1,0 +1,68 @@
+name: Common Backend Workflow
+
+on:
+  workflow_call:
+    inputs:
+      run_lint:
+        type: boolean
+        default: true
+      run_build:
+        type: boolean
+        default: true
+      run_type_checking:
+        type: boolean
+        default: true
+      run_test_coverage:
+        type: boolean
+        default: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js et npm install
+        uses: ./actions/setup-node
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: node-modules-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            node-modules-
+
+  lint:
+    needs: setup
+    if: ${{ inputs.run_lint }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔎 Lint code
+        uses: ./actions/linting-scan
+
+  build:
+    needs: setup
+    if: ${{ inputs.run_build }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗️ Build project
+        run: npm run build
+
+  type_checking:
+    needs: setup
+    if: ${{ inputs.run_type_checking }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🧠 TypeScript type checking
+        run: npm run type-check
+
+  test_coverage:
+    needs: setup
+    if: ${{ inputs.run_test_coverage }}
+    runs-on: unbuntu-latest
+    steps:
+      - name: 🧪 Run unit tests with coverage
+        run: npm run test:coverage

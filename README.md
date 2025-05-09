@@ -78,7 +78,8 @@ jobs:
 
 ## 🧩 Workflows disponibles
 
-| Nom                          | Description                                                         |
-|------------------------------|---------------------------------------------------------------------|
-| `common-backend-workflow`    | Workflow commun pour les projets backend.                           |
-| `portfolio-security-workflow`| Workflow spécifique au projet portfolio sécurité. |
+| Nom                           | Description                                       |
+|-------------------------------|---------------------------------------------------|
+| `common-backend-workflow`     | Workflow commun pour les projets backend.         |
+| `common-frontend-workflow`    | Workflow commun pour les projets frontend.        |
+| `portfolio-security-workflow` | Workflow spécifique au projet portfolio sécurité. |
