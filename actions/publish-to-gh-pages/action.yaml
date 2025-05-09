@@ -12,6 +12,10 @@ inputs:
     description: "Directory of the Security Report (OWASP Dependency Check)"
     required: false
     default: "dependency-check-report"
+  linting_report_dir:
+    description: "Directory of the Linting Report (Java, JavaScript, TypeScript)"
+    required: false
+    default: "lint"
 
 runs:
   using: "composite"
@@ -46,6 +50,18 @@ runs:
           echo "Security report copied to GitHub Pages."
         else
           echo "No security report found. Skipping."
+        fi
+      shell: bash
+
+    - name: Copy Linting Report (if exists)
+      if: ${{ inputs.linting_report_dir }}
+      run: |
+        if [ -d "${{ inputs.linting_report_dir }}" ]; then
+          mkdir -p ${{ inputs.publish_dir }}/lint
+          cp -r ${{ inputs.linting_report_dir }}/* ${{ inputs.publish_dir }}/lint/
+          echo "Linting report copied to GitHub Pages."
+        else
+          echo "No linting report found. Skipping."
         fi
       shell: bash
 

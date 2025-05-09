@@ -1,5 +1,5 @@
 name: "Code Formatting (Java, JavaScript, TypeScript)"
-description: "Vérifie et formate automatiquement le code Java avec google-java-format et JS/TS avec Prettier"
+description: "Vérifie si le code Java, JavaScript et TypeScript est correctement formaté sans le modifier automatiquement"
 inputs:
   fail_if_unformatted:
     description: "Echoue si du code n'est pas correctement formaté (true/false)"
@@ -8,39 +8,59 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: 💻 Detect Project Type
+      id: detect_project_type
+      uses: ./actions/detect-project-type
 
-    - name: Install Google Java Format (Java)
+    - name: 📜 Initialize HTML Report
+      if: env.project_type == 'java'
+      run: |
+        mkdir -p lint
+        echo "<html><head><title>Linting Report</title></head><body>" > lint/formatting-report.html
+      shell: bash
+
+    - name: 🔧 Install Google Java Format (Java)
+      if: env.project_type == 'java'
       uses: ./actions/setup-google-java-format
 
-    - name: Format Java Code (google-java-format)
+    - name: 🔎 Check Java Code Formatting (google-java-format)
+      if: env.project_type == 'java'
       run: |
-        if find . -name "*.java" | grep -q .; then
-          find . -name "*.java" -exec java -jar google-java-format.jar --replace {} \;
-          echo "Java code has been formatted using Google Java Format."
+        echo "Vérification du format Java avec Google Java Format..."
+        echo "<h2>Vérification du format Java</h2><ul>" >> lint/formatting-report.html
+        has_unformatted=false
+
+        for file in $(git ls-files -- '*.java'); do
+            echo "Vérification du format : $file"
+            if ! java -jar google-java-format.jar --dry-run --set-exit-if-changed "$file"; then
+              echo "❌ Fichier mal formaté : $file"
+              git diff -- "$file" || true
+              has_unformatted=true
+
+              echo "<li><strong>$file</strong><pre>" >> lint/formatting-report.html
+              git diff -- "$file" >> lint/formatting-report.html
+            fi
+          done
+
+        if [ "$has_unformatted" = true ]; then
+          echo "</ul><p><strong>🚫 Des fichiers Java sont mal formatés.</strong></p></body></html>" >> lint/formatting-report.html
+          exit 1
         else
-          echo "No Java files found to format."
+          echo "</ul><p><strong>✅ Tout le code Java est correctement formaté.</strong></p></body></html>" >> lint/formatting-report.html
         fi
       shell: bash
 
-    - name: Install Prettier (JavaScript/TypeScript)
-      uses: ./actions/setup-prettier
+    - name: 🔧 Set up Node.js 22 and install dependencies
+      if: env.project_type == 'node'
+      uses: ./actions/setup-node
 
-    - name: Format JavaScript/TypeScript Code (Prettier)
+    - name: 🧹 Run ESLint
+      if: env.project_type == 'node'
       run: |
-        prettier --write "src/**/*.{js,jsx,ts,tsx}" || true
-        echo "JavaScript/TypeScript code has been formatted using Prettier."
-      shell: bash
-
-    - name: Check for Unformatted Code
-      run: |
-        echo "Vérification du format de code :"
-        if [ "$(git diff --name-only | grep -E '\.java|\.js|\.jsx|\.ts|\.tsx')" ]; then
-          echo "Du code non formaté a été détecté :"
-          git diff --name-only | grep -E '\.java|\.js|\.jsx|\.ts|\.tsx'
-          if [ "${{ inputs.fail_if_unformatted }}" == "true" ]; then
-            exit 1
-          fi
+        if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ]; then
+          echo "Running ESLint..."
+          npm run lint
         else
-          echo "Tout le code est correctement formaté."
+          echo "ESLint configuration not found. Skipping."
         fi
       shell: bash

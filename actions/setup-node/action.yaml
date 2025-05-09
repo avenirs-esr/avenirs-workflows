@@ -1,0 +1,15 @@
+name: "Setup Node.js 22 with npm cache and Install dependencies"
+description: "Installs Node.js 22 and sets up npm cache, then installs dependencies using npm ci"
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js 22 with npm cache
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: npm
+      shell: bash
+
+    - name: Install dependencies with npm ci
+      run: npm ci
+      shell: bash
