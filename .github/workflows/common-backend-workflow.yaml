@@ -1,0 +1,42 @@
+name: Common Backend Workflow
+
+on:
+  workflow_call:
+    inputs:
+      run_lint:
+        type: boolean
+        default: true
+      run_security_scan:
+        type: boolean
+        default: true
+      run_test_coverage:
+        type: boolean
+        default: true
+
+jobs:
+  lint:
+    if: ${{ inputs.run_lint }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: 🔎 Lint code
+        uses: avenirs-esr/avenirs-workflows/.github/actions/linting-scan@feat/core-actions-workflows
+
+  security_scan:
+    if: ${{ inputs.run_security_scan }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: 🔒 Security scan
+        uses: avenirs-esr/avenirs-workflows/.github/actions/security-scan@feat/core-actions-workflows
+
+  test_coverage:
+    if: ${{ inputs.run_test_coverage }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: 🧪 Run tests and generate coverage report
+        uses: avenirs-esr/avenirs-workflows/.github/actions/unit-tests-and-code-coverage@feat/core-actions-workflows

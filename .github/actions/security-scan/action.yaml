@@ -9,10 +9,10 @@ runs:
   using: "composite"
   steps:
     - name: Setup Trivy
-      uses: ./actions/setup-trivy
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-trivy@feat/core-actions-workflows
 
     - name: Detect Project Type
-      uses: ./actions/detect-project-type
+      uses: avenirs-esr/avenirs-workflows/.github/actions/detect-project-type@feat/core-actions-workflows
 
     - name: Security Scan with Trivy (Java)
       if: env.project_type == 'java'

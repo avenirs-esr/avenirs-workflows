@@ -10,7 +10,7 @@ runs:
   steps:
     - name: 💻 Detect Project Type
       id: detect_project_type
-      uses: ./actions/detect-project-type
+      uses: avenirs-esr/avenirs-workflows/.github/actions/detect-project-type@feat/core-actions-workflows
 
     - name: 📜 Initialize HTML Report
       if: env.project_type == 'java'
@@ -21,7 +21,7 @@ runs:
 
     - name: 🔧 Install Google Java Format (Java)
       if: env.project_type == 'java'
-      uses: ./actions/setup-google-java-format
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-google-java-format@feat/core-actions-workflows
 
     - name: 🔎 Check Java Code Formatting (google-java-format)
       if: env.project_type == 'java'
@@ -52,7 +52,7 @@ runs:
 
     - name: 🔧 Set up Node.js 22 and install dependencies
       if: env.project_type == 'node'
-      uses: ./actions/setup-node
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@feat/core-actions-workflows
 
     - name: 🧹 Run ESLint
       if: env.project_type == 'node'
