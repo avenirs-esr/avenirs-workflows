@@ -32,12 +32,17 @@ runs:
         fi
       shell: bash
 
+    - name: Clone reusable workflows and actions repository
+      run: |
+        git clone --single-branch --branch feat/core-actions-workflows --depth 1 https://github.com/avenirs-esr/avenirs-workflows.git /tmp/avenirs-workflows
+      shell: bash
+
     - name: Copy index page
       run: |
         mkdir -p ${{ inputs.publish_dir }}/assets/images
-        cp .github/actions/publish-to-gh-pages/index.html ${{ inputs.publish_dir }}/index.html
-        cp .github/actions/publish-to-gh-pages/assets/images/avenirs-esr-logo_medium.jpg ${{ inputs.publish_dir }}/assets/images/avenirs-esr-logo_medium.jpg
-        cp .github/actions/publish-to-gh-pages/assets/images/favicon.ico ${{ inputs.publish_dir }}/assets/images/favicon.ico
+        cp /tmp/avenirs-workflows/.github/actions/publish-to-gh-pages/index.html ${{ inputs.publish_dir }}/index.html
+        cp /tmp/avenirs-workflows/.github/actions/publish-to-gh-pages/assets/images/avenirs-esr-logo_medium.jpg ${{ inputs.publish_dir }}/assets/images/avenirs-esr-logo_medium.jpg
+        cp /tmp/avenirs-workflows/.github/actions/publish-to-gh-pages/assets/images/favicon.ico ${{ inputs.publish_dir }}/assets/images/favicon.ico
         echo "Index file copied."
       shell: bash
 
