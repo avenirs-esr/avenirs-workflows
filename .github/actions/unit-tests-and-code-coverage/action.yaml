@@ -51,3 +51,10 @@ runs:
       run: |
          ./mvnw clean compile javadoc:javadoc test jacoco:report
       shell: bash
+
+    - name: Generate JaCoCo Report
+      run: |
+        mkdir -p jacoco-report
+        cp -r target/site/jacoco jacoco-report/
+        echo "JaCoCo report generated."
+      shell: bash

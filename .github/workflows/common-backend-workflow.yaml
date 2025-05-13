@@ -25,6 +25,12 @@ jobs:
           ref: ${{ github.head_ref }}
       - name: 🔎 Lint code
         uses: avenirs-esr/avenirs-workflows/.github/actions/linting-scan@feat/core-actions-workflows
+      - name: 📦 Save Linting Report
+        if: ${{ hashFiles('lint/**') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: lint
 
   security_scan:
     if: ${{ inputs.run_security_scan }}
@@ -37,6 +43,12 @@ jobs:
           ref: ${{ github.head_ref }}
       - name: 🔒 Security scan
         uses: avenirs-esr/avenirs-workflows/.github/actions/security-scan@feat/core-actions-workflows
+      - name: 📦 Save Security Report
+        if: ${{ hashFiles('dependency-check-report/**') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: dependency-check-report
 
   test_coverage:
     if: ${{ inputs.run_test_coverage }}
@@ -54,17 +66,41 @@ jobs:
         with:
           ignore_ssl_verification: "true"
           import_certificate_from_localhost: "false"
+      - name: 📦 Save JaCoCo Report
+        if: ${{ hashFiles('jacoco-report/**') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: jacoco-report
 
   publish_to_gh_pages:
     if: ${{ inputs.run_lint || inputs.run_security_scan || inputs.run_test_coverage }}
     runs-on: ubuntu-latest
-    needs: [lint, security_scan, test_coverage]
+    needs: [ lint, security_scan, test_coverage ]
     steps:
       - name: ✅ Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
           ref: ${{ github.head_ref }}
+      - name: 📥 Download Security Report
+        if: ${{ inputs.run_security_scan }}
+        uses: actions/download-artifact@v4
+        with:
+          name: security-report
+          path: dependency-check-report
+      - name: 📥 Download Linting Report
+        if: ${{ inputs.run_lint }}
+        uses: actions/download-artifact@v4
+        with:
+          name: lint-report
+          path: lint
+      - name: 📥 Download JaCoCo Report
+        if: ${{ inputs.run_test_coverage }}
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-report
+          path: jacoco-report
       - name: 📦 Publish reports to GitHub Pages
         uses: avenirs-esr/avenirs-workflows/.github/actions/publish-to-gh-pages@feat/core-actions-workflows
         with:

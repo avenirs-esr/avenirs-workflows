@@ -16,6 +16,10 @@ inputs:
     description: "Directory of the Linting Report (Java, JavaScript, TypeScript)"
     required: false
     default: "lint"
+  jacoco_report_dir:
+    description: "Directory of the JaCoCo Report (Java)"
+    required: false
+    default: "jacoco-report"
 
 runs:
   using: "composite"
@@ -39,10 +43,10 @@ runs:
 
     - name: Copy index page
       run: |
-        mkdir -p ${{ inputs.publish_dir }}/assets/images
-        cp /tmp/avenirs-workflows/.github/actions/publish-to-gh-pages/index.html ${{ inputs.publish_dir }}/index.html
-        cp /tmp/avenirs-workflows/.github/actions/publish-to-gh-pages/assets/images/avenirs-esr-logo_medium.jpg ${{ inputs.publish_dir }}/assets/images/avenirs-esr-logo_medium.jpg
-        cp /tmp/avenirs-workflows/.github/actions/publish-to-gh-pages/assets/images/favicon.ico ${{ inputs.publish_dir }}/assets/images/favicon.ico
+        mkdir -p ${{ inputs.publish_dir }}/docs/assets/images
+        cp /tmp/avenirs-workflows/.github/actions/publish-to-gh-pages/index.html ${{ inputs.publish_dir }}/docs/index.html
+        cp /tmp/avenirs-workflows/.github/actions/publish-to-gh-pages/assets/images/avenirs-esr-logo_medium.jpg ${{ inputs.publish_dir }}/docs/assets/images/avenirs-esr-logo_medium.jpg
+        cp /tmp/avenirs-workflows/.github/actions/publish-to-gh-pages/assets/images/favicon.ico ${{ inputs.publish_dir }}/docs/assets/images/favicon.ico
         echo "Index file copied."
       shell: bash
 
@@ -50,8 +54,8 @@ runs:
       if: ${{ inputs.security_report_dir }}
       run: |
         if [ -d "${{ inputs.security_report_dir }}" ]; then
-          mkdir -p ${{ inputs.publish_dir }}/security
-          cp -r ${{ inputs.security_report_dir }}/* ${{ inputs.publish_dir }}/security/
+          mkdir -p ${{ inputs.publish_dir }}/docs/security
+          cp -r ${{ inputs.security_report_dir }}/* ${{ inputs.publish_dir }}/docs/security/
           echo "Security report copied to GitHub Pages."
         else
           echo "No security report found. Skipping."
@@ -62,11 +66,23 @@ runs:
       if: ${{ inputs.linting_report_dir }}
       run: |
         if [ -d "${{ inputs.linting_report_dir }}" ]; then
-          mkdir -p ${{ inputs.publish_dir }}/lint
-          cp -r ${{ inputs.linting_report_dir }}/* ${{ inputs.publish_dir }}/lint/
+          mkdir -p ${{ inputs.publish_dir }}/docs/lint
+          cp -r ${{ inputs.linting_report_dir }}/* ${{ inputs.publish_dir }}/docs/lint/
           echo "Linting report copied to GitHub Pages."
         else
           echo "No linting report found. Skipping."
+        fi
+      shell: bash
+
+    - name: Copy JaCoCo Report (if exists)
+      if: ${{ inputs.jacoco_report_dir }}
+      run: |
+        if [ -d "jacoco-report" ]; then
+          mkdir -p ${{ inputs.publish_dir }}/docs/jacoco-report
+          cp -r ${{ inputs.jacoco_report_dir }}/* ${{ inputs.publish_dir }}/docs/jacoco-report/
+          echo "JaCoCo report copied to GitHub Pages."
+        else
+          echo "No JaCoCo report found. Skipping."
         fi
       shell: bash
 
