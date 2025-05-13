@@ -4,7 +4,7 @@ inputs:
   fail_on_critical:
     description: "Echouer si des vulnérabilités critiques sont détectées (true/false)"
     required: false
-    default: "false"
+    default: "true"
 runs:
   using: "composite"
   steps:
@@ -26,7 +26,7 @@ runs:
       if: env.project_type == 'node'
       run: |
         mkdir -p dependency-check-report
-        trivy fs --security-checks vuln --exit-code 0 --format template --template "@/contrib/html.tpl" -o dependency-check-report/security-report.html .
+        trivy fs --security-checks vuln --exit-code 0 --format template --template "contrib/html.tpl" -o dependency-check-report/security-report.html .
         echo "Trivy security report for Node.js generated."
       shell: bash
 
