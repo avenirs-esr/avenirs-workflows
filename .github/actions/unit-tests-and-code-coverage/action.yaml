@@ -25,7 +25,7 @@ runs:
           key: maven-cache-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             maven-cache-
-           
+
     - name: Generate env.properties to Ignore SSL Verification
       if: ${{inputs.ignore_ssl_verification == 'true'}}
       run: |
@@ -34,7 +34,7 @@ runs:
         echo "spring.cloud.openfeign.ssl.skip-ssl-validation=true" >> src/main/resources/env.properties
         echo "server.ssl.enabled=false" >> src/main/resources/env.properties
         echo "avenirs.authentication.oidc.provider=localhost" >> src/main/resources/env.properties
-        
+
         cat src/main/resources/env.properties
       shell: bash
 
@@ -47,7 +47,19 @@ runs:
 
       shell: bash
 
+    - name: Cache Maven
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Clear Maven Cache (Force fresh build)
+      run: rm -rf ~/.m2/repository
+      shell: bash
+
     - name: Build and Test
       run: |
          ./mvnw clean compile javadoc:javadoc test jacoco:report
-      shell: bash 
+      shell: bash
