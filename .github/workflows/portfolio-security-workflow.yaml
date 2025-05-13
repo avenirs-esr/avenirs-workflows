@@ -46,12 +46,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.head_ref }}
 
       - name: Create Docker network
         run: docker network create avenirs-network
 
       - name: Setup PostgreSQL
-        uses: ./actions/setup-postgres
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-postgres@feat/core-actions-workflows
         with:
           jasypt_password: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
           postgres_db: ${{ secrets.POSTGRES_DB }}
@@ -59,7 +62,7 @@ jobs:
           postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
 
       - name: Setup OpenLDAP
-        uses: ./actions/setup-openldap
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-openldap@feat/core-actions-workflows
         with:
           ldap_base_dn: ${{ env.LDAP_BASE_DN }}
           ldap_admin: ${{ env.LDAP_ADMIN }}
@@ -67,37 +70,37 @@ jobs:
           disable_fixtures: true
 
       - name: Setup CAS
-        uses: ./actions/setup-cas
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-cas@feat/core-actions-workflows
         with:
           rebuild: false
 
       - name: Run Unit Tests & Coverage
-        uses: ./actions/unit-tests-and-code-coverage
+        uses: avenirs-esr/avenirs-workflows/.github/actions/unit-tests-and-code-coverage@feat/core-actions-workflows
 
       - name: Start Spring Boot App
-        uses: ./actions/spring-boot-app/start
+        uses: avenirs-esr/avenirs-workflows/.github/actions/spring-boot-app/start@feat/core-actions-workflows
         with:
           app_url: ${{ inputs.app_url }}
 
       - name: Inject Fixtures (Fake data)
-        uses: ./actions/fixtures/faker
+        uses: avenirs-esr/avenirs-workflows/.github/actions/fixtures/faker@feat/core-actions-workflows
         with:
           ldap_admin: ${{ env.LDAP_ADMIN }}
           ldap_admin_password: ${{ env.LDAP_ADMIN_PASSWORD }}
 
       - name: Load Tests
-        uses: ./actions/load-tests
+        uses: avenirs-esr/avenirs-workflows/.github/actions/load-tests@feat/core-actions-workflows
         with:
           fixtures: ${{ inputs.fixtures_path }}
           app_url: ${{ inputs.app_url }}
 
       - name: Stop Spring Boot App
-        uses: ./actions/spring-boot-app/stop
+        uses: avenirs-esr/avenirs-workflows/.github/actions/spring-boot-app/stop@feat/core-actions-workflows
         with:
           app_url: ${{ inputs.app_url }}
 
       - name: Publish Reports to GitHub Pages
-        uses: ./actions/publish-to-gh-pages
+        uses: avenirs-esr/avenirs-workflows/.github/actions/publish-to-gh-pages@feat/core-actions-workflows
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/site
+          publish_dir: avenirs-esr/avenirs-workflows/.github/target/site@feat/core-actions-workflows

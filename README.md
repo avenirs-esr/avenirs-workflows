@@ -9,11 +9,10 @@ Il permet de standardiser, partager et maintenir une intégration continue (CI/C
 
 ```
 avenirs-workflows/
-├── actions/                # Actions composites personnalisées
-│   └── <action-name>/      # Dossier pour chaque action (avec action.yml et README.md)
-├── workflows/              # Workflows réutilisables via 'workflow_call'
-│   └── <workflow-name>/    # Dossier pour chaque workflow (avec workflow.yml et README.md)
-├── .github/workflows/      # Workflows CI de ce dépôt (tests internes)
+├── .github/
+│    └──actions/            # Actions composites personnalisées
+│       └── <action-name>/  # Dossier pour chaque action (avec action.yml)
+│    └──workflows/          # Workflows réutilisables via 'workflow_call' avec nom_workflow.yaml
 ├── .editorconfig           # Convention de formatage partagée
 ├── LICENSE                 # Licence d'utilisation du code
 ├── CHANGELOG.md            # Journal des modifications
@@ -27,7 +26,7 @@ avenirs-workflows/
 ```yaml
 # Exemple d'appel dans un job GitHub Actions
 - name: Setup Node
-  uses: avenirs/avenirs-workflows/actions/install-node@v1
+  uses: avenirs-esr/avenirs-workflows/.github/actions/install-node@main
   with:
     node-version: '22'
 ```
@@ -46,7 +45,7 @@ on:
 
 jobs:
   call-reusable-workflow:
-    uses: avenirs/avenirs-workflows/workflows/build-and-test/workflow.yml@v1
+    uses: avenirs-esr/avenirs-workflows/.github/workflows/common-backend-workflow.yaml@main
     with:
       project-name: my-app
     secrets:

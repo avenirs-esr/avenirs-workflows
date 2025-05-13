@@ -19,7 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ✅ Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.head_ref }}
       - name: 🔎 Lint code
         uses: avenirs-esr/avenirs-workflows/.github/actions/linting-scan@feat/core-actions-workflows
 
@@ -28,7 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ✅ Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.head_ref }}
       - name: 🔒 Security scan
         uses: avenirs-esr/avenirs-workflows/.github/actions/security-scan@feat/core-actions-workflows
 
@@ -37,7 +43,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ✅ Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.head_ref }}
       - name: ⬆️ Grant execution permissions for Maven Wrapper
         run: chmod +x ./mvnw
       - name: 🧪 Run tests and generate coverage report

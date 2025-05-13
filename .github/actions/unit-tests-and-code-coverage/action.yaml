@@ -47,18 +47,6 @@ runs:
 
       shell: bash
 
-    - name: Cache Maven
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
-
-    - name: Clear Maven Cache (Force fresh build)
-      run: rm -rf ~/.m2/repository
-      shell: bash
-
     - name: Build and Test
       run: |
          ./mvnw clean compile javadoc:javadoc test jacoco:report
