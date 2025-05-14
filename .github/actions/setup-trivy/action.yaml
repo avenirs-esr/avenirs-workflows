@@ -13,10 +13,3 @@ runs:
           echo "Trivy is already installed."
         fi
       shell: bash
-
-    - name: Download HTML Template
-      run: |
-        mkdir -p contrib
-        curl -L https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl -o contrib/html.tpl
-        echo "Trivy HTML template downloaded."
-      shell: bash
