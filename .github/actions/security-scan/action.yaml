@@ -5,18 +5,14 @@ inputs:
     description: "Echouer si des vulnérabilités critiques sont détectées (true/false)"
     required: false
     default: "true"
-  branch:
-    description: "Nom de la branche à utiliser pour l'action composite'"
-    required: false
-    default: "feat/core-actions-workflows"
 runs:
   using: "composite"
   steps:
     - name: Setup Trivy
-      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-trivy@${{ inputs.branch }}
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-trivy@feat/core-actions-workflows
 
     - name: Detect Project Type
-      uses: avenirs-esr/avenirs-workflows/.github/actions/detect-project-type@${{ inputs.branch }}
+      uses: avenirs-esr/avenirs-workflows/.github/actions/detect-project-type@feat/core-actions-workflows
 
     - name: Download Trivy Template
       uses: actions/download-artifact@v4

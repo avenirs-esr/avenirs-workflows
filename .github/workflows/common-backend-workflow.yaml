@@ -12,9 +12,6 @@ on:
       run_test_coverage:
         type: boolean
         default: true
-      branch:
-        type: string
-        default: "feat/core-actions-workflows"
 
 jobs:
   setup:
@@ -26,7 +23,7 @@ jobs:
           fetch-depth: 1
           ref: ${{ github.head_ref }}
       - name: 📤 Upload Templates
-        uses: avenirs-esr/avenirs-workflows/.github/actions/upload-gh-page-template@${{ inputs.branch }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/upload-gh-page-template@feat/core-actions-workflows
   lint:
     if: ${{ inputs.run_lint }}
     runs-on: ubuntu-latest
@@ -37,7 +34,7 @@ jobs:
           fetch-depth: 1
           ref: ${{ github.head_ref }}
       - name: 🔎 Lint code
-        uses: avenirs-esr/avenirs-workflows/.github/actions/linting-scan@${{ inputs.branch }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/linting-scan@feat/core-actions-workflows
       - name: 📦 Save Linting Report
         if: ${{ hashFiles('lint/**') != '' }}
         uses: actions/upload-artifact@v4
@@ -55,7 +52,7 @@ jobs:
           fetch-depth: 1
           ref: ${{ github.head_ref }}
       - name: 🔒 Security scan
-        uses: avenirs-esr/avenirs-workflows/.github/actions/security-scan@${{ inputs.branch }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/security-scan@feat/core-actions-workflows
       - name: 📦 Save Security Report
         if: ${{ hashFiles('dependency-check-report/**') != '' }}
         uses: actions/upload-artifact@v4
@@ -75,7 +72,7 @@ jobs:
       - name: ⬆️ Grant execution permissions for Maven Wrapper
         run: chmod +x ./mvnw
       - name: 🧪 Run tests and generate coverage report
-        uses: avenirs-esr/avenirs-workflows/.github/actions/unit-tests-and-code-coverage@${{ inputs.branch }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/unit-tests-and-code-coverage@feat/core-actions-workflows
         with:
           ignore_ssl_verification: "true"
           import_certificate_from_localhost: "false"
@@ -115,7 +112,7 @@ jobs:
           name: jacoco-report
           path: jacoco-report
       - name: 📦 Publish reports to GitHub Pages
-        uses: avenirs-esr/avenirs-workflows/.github/actions/publish-to-gh-pages@${{ inputs.branch }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/publish-to-gh-pages@feat/core-actions-workflows
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: gh-pages

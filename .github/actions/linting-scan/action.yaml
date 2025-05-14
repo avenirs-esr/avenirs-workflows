@@ -5,16 +5,12 @@ inputs:
     description: "Echoue si du code n'est pas correctement formaté (true/false)"
     required: false
     default: "true"
-  branch:
-    description: "Nom de la branche à utiliser pour l'action composite'"
-    required: false
-    default: "feat/core-actions-workflows"
 runs:
   using: "composite"
   steps:
     - name: 💻 Detect Project Type
       id: detect_project_type
-      uses: avenirs-esr/avenirs-workflows/.github/actions/detect-project-type@${{ inputs.branch }}
+      uses: avenirs-esr/avenirs-workflows/.github/actions/detect-project-type@feat/core-actions-workflows
 
     - name: 📜 Initialize HTML Report
       if: env.project_type == 'java'
@@ -25,7 +21,7 @@ runs:
 
     - name: 🔧 Install Google Java Format (Java)
       if: env.project_type == 'java'
-      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-google-java-format@${{ inputs.branch }}
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-google-java-format@feat/core-actions-workflows
 
     - name: 🔎 Check Java Code Formatting (google-java-format)
       if: env.project_type == 'java'
@@ -56,7 +52,7 @@ runs:
 
     - name: 🔧 Set up Node.js 22 and install dependencies
       if: env.project_type == 'node'
-      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@${{ inputs.branch }}
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@feat/core-actions-workflows
 
     - name: 🧹 Run ESLint
       if: env.project_type == 'node'
