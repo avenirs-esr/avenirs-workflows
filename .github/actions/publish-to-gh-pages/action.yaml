@@ -45,9 +45,9 @@ runs:
     - name: Copy index page
       run: |
         mkdir -p ${{ inputs.publish_dir }}/docs/assets/images
-        cp /gh-page-template/index.html ${{ inputs.publish_dir }}/docs/index.html
-        cp /gh-page-template/assets/images/avenirs-esr-logo_medium.jpg ${{ inputs.publish_dir }}/docs/assets/images/avenirs-esr-logo_medium.jpg
-        cp /gh-page-template/assets/images/favicon.ico ${{ inputs.publish_dir }}/docs/assets/images/favicon.ico
+        cp ./gh-page-template/index.html ${{ inputs.publish_dir }}/docs/index.html
+        cp ./gh-page-template/assets/images/avenirs-esr-logo_medium.jpg ${{ inputs.publish_dir }}/docs/assets/images/avenirs-esr-logo_medium.jpg
+        cp ./gh-page-template/assets/images/favicon.ico ${{ inputs.publish_dir }}/docs/assets/images/favicon.ico
         echo "Index file copied."
       shell: bash
 
