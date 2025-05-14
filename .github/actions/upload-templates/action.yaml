@@ -3,17 +3,24 @@ description: "Upload necessary files for creating GitHub page and trivy report"
 runs:
   using: "composite"
   steps:
-      - name: Clone reusable workflows and actions repository
-        run: |
-          git clone --single-branch --branch feat/core-actions-workflows --depth 1 https://github.com/avenirs-esr/avenirs-workflows.git /tmp/avenirs-workflows
-        shell: bash
-      - name: 📦 Save Github Pages Template
-        uses: actions/upload-artifact@v4
-        with:
-          name: gh-page-template
-          path: /tmp/avenirs-workflows/gh-page-template
-      - name: 📦 Save Trivy Template
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-template
-          path: /tmp/avenirs-workflows/trivy-template
+    - name: 📥 Download GitHub Pages Template
+      run: |
+        curl -L https://github.com/avenirs-esr/avenirs-workflows/archive/refs/heads/feat/core-actions-workflows.tar.gz | tar -xz --strip=2 --wildcards --no-anchored 'gh-page-template/*' -C /tmp
+      shell: bash
+
+    - name: 📥 Download Trivy Template
+      run: |
+        curl -L https://github.com/avenirs-esr/avenirs-workflows/archive/refs/heads/feat/core-actions-workflows.tar.gz | tar -xz --strip=2 --wildcards --no-anchored 'trivy-template/*' -C /tmp
+      shell: bash
+
+    - name: 📦 Save Github Pages Template
+      uses: actions/upload-artifact@v4
+      with:
+        name: gh-page-template
+        path: /tmp/gh-page-template
+
+    - name: 📦 Save Trivy Template
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-template
+        path: /tmp/trivy-template
