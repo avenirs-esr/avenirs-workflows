@@ -18,7 +18,7 @@ runs:
       if: env.project_type == 'java'
       run: |
         mkdir -p dependency-check-report
-        trivy fs --scanners vuln --exit-code 0 --format template --template "contrib/html.tpl" -o dependency-check-report/security-report.html .
+        trivy fs --scanners vuln --exit-code 0 --format html -o dependency-check-report/security-report.html .
         echo "Trivy security report for Java generated."
       shell: bash
 
@@ -26,7 +26,7 @@ runs:
       if: env.project_type == 'node'
       run: |
         mkdir -p dependency-check-report
-        trivy fs --security-checks vuln --exit-code 0 --format template --template "contrib/html.tpl" -o dependency-check-report/security-report.html .
+        trivy fs --security-checks vuln --exit-code 0 --format template --template html -o dependency-check-report/security-report.html .
         echo "Trivy security report for Node.js generated."
       shell: bash
 
