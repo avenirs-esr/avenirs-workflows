@@ -13,6 +13,8 @@ avenirs-workflows/
 │    └──actions/            # Actions composites personnalisées
 │       └── <action-name>/  # Dossier pour chaque action (avec action.yml)
 │    └──workflows/          # Workflows réutilisables via 'workflow_call' avec nom_workflow.yaml
+├── gh-page-template/       # Dossier contenant le template de la GitHub page générée
+├── trivy-template/         # Dossier contenant le template utilisé pour le rapport de sécurité
 ├── .editorconfig           # Convention de formatage partagée
 ├── LICENSE                 # Licence d'utilisation du code
 ├── CHANGELOG.md            # Journal des modifications
@@ -56,22 +58,23 @@ jobs:
 
 ## 📦 Actions disponibles
 
-| Nom                            | Description                                                   |
-|--------------------------------|---------------------------------------------------------------|
-| `detect-project-type`          | Détecte automatiquement le type de projet.                    |
-| `gh-action-utils`              | Utilitaires pour les workflows GitHub.                        |
-| `linting-scan`                 | Exécute des vérifications de linting.                         |
-| `load-tests`                   | Exécute des tests de charge automatisés.                      |
-| `publish-to-gh-pages`          | Publie sur GitHub Pages.                                      |
-| `security-scan`                | Exécute une analyse de sécurité avec Trivy.                   |
-| `setup-cas`                    | Configure CAS (Central Authentication Service).               |
-| `setup-google-java-format`     | Configure Google Java Format.                                 |
-| `setup-node`                   | Installe et configure Node.js et exécute un npm ci.           |
-| `setup-openldap`               | Configure OpenLDAP.                                           |
-| `setup-postgres`               | Installe et configure PostgreSQL.                             |
-| `setup-trivy`                  | Installe Trivy pour les scans de sécurité.                    |
-| `spring-boot-app`              | Actions liées au start et stop d'une application Spring Boot. |
-| `unit-tests-and-code-coverage` | Exécute les tests unitaires et génère la couverture de code.  |
+| Nom                            | Description                                                                             |
+|--------------------------------|-----------------------------------------------------------------------------------------|
+| `detect-project-type`          | Détecte automatiquement le type de projet.                                              |
+| `gh-action-utils`              | Utilitaires pour les workflows GitHub.                                                  |
+| `linting-scan`                 | Exécute des vérifications de linting.                                                   |
+| `load-tests`                   | Exécute des tests de charge automatisés.                                                |
+| `publish-to-gh-pages`          | Publie sur GitHub Pages.                                                                |
+| `security-scan`                | Exécute une analyse de sécurité avec Trivy.                                             |
+| `setup-cas`                    | Configure CAS (Central Authentication Service).                                         |
+| `setup-google-java-format`     | Configure Google Java Format.                                                           |
+| `setup-node`                   | Installe et configure Node.js et exécute un npm ci.                                     |
+| `setup-openldap`               | Configure OpenLDAP.                                                                     |
+| `setup-postgres`               | Installe et configure PostgreSQL.                                                       |
+| `setup-trivy`                  | Installe Trivy pour les scans de sécurité.                                              |
+| `spring-boot-app`              | Actions liées au start et stop d'une application Spring Boot.                           |
+| `unit-tests-and-code-coverage` | Exécute les tests unitaires et génère la couverture de code.                            |
+| `upload-templates`             | Action permettant l'upload des templates en tant qu'artefacts afin qu'ils soient disponibles pour les autres jobs. |
 
 ---
 
