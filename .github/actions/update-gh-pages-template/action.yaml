@@ -1,0 +1,71 @@
+name: "Update GitHub Pages Template"
+description: "Update the GitHub Pages template with the latest reports and texts"
+
+inputs:
+  page_title:
+    description: "Page title to be displayed on the GitHub Pages"
+    required: true
+    default: "Avenirs Documentation"
+  publish_dir:
+    description: "Directory to publish"
+    required: true
+    default: "gh-pages"
+  security_report_dir:
+    description: "Directory of the Security Report (OWASP Dependency Check)"
+    required: false
+    default: "dependency-check-report"
+  linting_report_dir:
+    description: "Directory of the Linting Report (Java, JavaScript, TypeScript)"
+    required: false
+    default: "lint"
+  jacoco_report_dir:
+    description: "Directory of the JaCoCo Report (Java)"
+    required: false
+    default: "jacoco-report"
+  javadoc_dir:
+    description: "Directory of the Javadoc Report"
+    required: false
+    default: "apidocs"
+  loading_report_dir:
+    description: "Directory of the Loading tests Report (Java, JavaScript, TypeScript)"
+    required: false
+    default: "loading"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Modify GitHub Page Template
+      run: |
+        sed -i "s|<title>.*</title>|<title>Documentation ${{ inputs.page_title }}</title>|" ${{ inputs.publish_dir }}/docs/index.html
+        sed -i "s|<h1>.*</h1>|<h1>${{ inputs.page_title }}</h1>|" ${{ inputs.publish_dir }}/docs/index.html
+
+        # Générer la liste dynamique des rapports
+        reports=""
+
+        if [ -d "${{ inputs.javadoc_dir }}" ]; then
+        reports+="<li><a href='${{ inputs.javadoc_dir }}/index.html' target='_blank'>Documentation Javadoc</a></li>"
+        fi
+
+        if [ -d "${{ inputs.jacoco_report_dir }}" ]; then
+        reports+="<li><a href='${{ inputs.jacoco_report_dir }}/jacoco/index.html' target='_blank'>Rapport de couverture des tests (JaCoCo)</a></li>"
+        fi
+
+        if [ -d "${{ inputs.linting_report_dir }}" ]; then
+        reports+="<li><a href='${{ inputs.linting_report_dir }}/formatting-report.html' target='_blank'>Rapport du Linter (Java)</a></li>"
+        fi
+
+        if [ -d "${{ inputs.security_report_dir }}" ]; then
+        reports+="<li><a href='${{ inputs.security_report_dir }}/security-report.html' target='_blank'>Rapport test de vulnérabilité</a></li>"
+        fi
+
+        if [ -d "${{ inputs.loading_report_dir }}" ]; then
+        reports+="<li><a href='${{ inputs.loading_report_dir }}/locust_report.html' target='_blank'>Rapport test de charge</a></li>"
+        reports+="<li><a href='${{ inputs.loading_report_dir }}/locust_report_stats.csv' target='_blank'>Statistiques test de charge</a></li>"
+        fi
+
+        if [ -n "$reports" ]; then
+        sed -i "s|<ul class='dynamic-reports'></ul>|<ul class='dynamic-reports'>$reports</ul>|" ${{ inputs.publish_dir }}/docs/index.html
+        else
+        sed -i "s|<ul class='dynamic-reports'></ul>|<p>Aucun rapport disponible.</p>|" ${{ inputs.publish_dir }}/docs/index.html
+        fi
+      shell: bash

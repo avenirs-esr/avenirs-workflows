@@ -12,6 +12,9 @@ on:
       run_test_coverage:
         type: boolean
         default: true
+      page_title:
+        type: string
+        default: "${{ github.event.repository.name }} - Documentation"
 
 jobs:
   setup:
@@ -119,3 +122,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: gh-pages
+          page_title: ${{ inputs.page_title }}

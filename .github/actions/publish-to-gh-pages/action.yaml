@@ -20,6 +20,18 @@ inputs:
     description: "Directory of the JaCoCo Report (Java)"
     required: false
     default: "jacoco-report"
+  page_title:
+    description: "Page title to be displayed on the GitHub Pages"
+    required: false
+    default: "Avenirs Documentation"
+  javadoc_dir:
+    description: "Directory of the Javadoc Report"
+    required: false
+    default: "apidocs"
+  loading_report_dir:
+    description: "Directory of the Loading tests Report (Java, JavaScript, TypeScript)"
+    required: false
+    default: "loading"
 
 runs:
   using: "composite"
@@ -50,6 +62,17 @@ runs:
         cp ./gh-page-template/assets/images/favicon.ico ${{ inputs.publish_dir }}/docs/assets/images/favicon.ico
         echo "Index file copied."
       shell: bash
+
+    - name: Modify GitHub Page Template
+      uses: avenirs-esr/avenirs-workflows/.github/actions/update-gh-pages-template@feat/core-actions-workflows
+      with:
+        page_title: ${{ inputs.page_title }}
+        publish_dir: ${{ inputs.publish_dir }}
+        javadoc_dir: ${{ inputs.javadoc_dir }}
+        jacoco_report_dir: ${{ inputs.jacoco_report_dir }}
+        linting_report_dir: ${{ inputs.linting_report_dir }}
+        security_report_dir: ${{ inputs.security_report_dir }}
+        loading_report_dir: ${{ inputs.loading_report_dir }}
 
     - name: Copy Security Report (if exists)
       if: ${{ inputs.security_report_dir }}
