@@ -78,8 +78,8 @@ runs:
       if: ${{ inputs.security_report_dir }}
       run: |
         if [ -d "${{ inputs.security_report_dir }}" ]; then
-          mkdir -p ${{ inputs.publish_dir }}/docs/security
-          cp -r ${{ inputs.security_report_dir }}/* ${{ inputs.publish_dir }}/docs/security/
+          mkdir -p ${{ inputs.publish_dir }}/docs/${{ inputs.security_report_dir }}
+          cp -r ${{ inputs.security_report_dir }}/* ${{ inputs.publish_dir }}/docs/${{ inputs.security_report_dir }}/
           echo "Security report copied to GitHub Pages."
         else
           echo "No security report found. Skipping."
@@ -90,8 +90,8 @@ runs:
       if: ${{ inputs.linting_report_dir }}
       run: |
         if [ -d "${{ inputs.linting_report_dir }}" ]; then
-          mkdir -p ${{ inputs.publish_dir }}/docs/lint
-          cp -r ${{ inputs.linting_report_dir }}/* ${{ inputs.publish_dir }}/docs/lint/
+          mkdir -p ${{ inputs.publish_dir }}/docs/${{ inputs.linting_report_dir }}
+          cp -r ${{ inputs.linting_report_dir }}/* ${{ inputs.publish_dir }}/docs/${{ inputs.linting_report_dir }}/
           echo "Linting report copied to GitHub Pages."
         else
           echo "No linting report found. Skipping."
@@ -102,8 +102,8 @@ runs:
       if: ${{ inputs.jacoco_report_dir }}
       run: |
         if [ -d "jacoco-report" ]; then
-          mkdir -p ${{ inputs.publish_dir }}/docs/jacoco-report
-          cp -r ${{ inputs.jacoco_report_dir }}/* ${{ inputs.publish_dir }}/docs/jacoco-report/
+          mkdir -p ${{ inputs.publish_dir }}/docs/${{ inputs.jacoco_report_dir }}
+          cp -r ${{ inputs.jacoco_report_dir }}/* ${{ inputs.publish_dir }}/docs/${{ inputs.jacoco_report_dir }}/
           echo "JaCoCo report copied to GitHub Pages."
         else
           echo "No JaCoCo report found. Skipping."
