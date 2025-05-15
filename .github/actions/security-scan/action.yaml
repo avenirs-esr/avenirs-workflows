@@ -1,0 +1,62 @@
+name: "Security Scan with Trivy"
+description: "Analyse les dépendances (Java ou Node.js) avec Trivy et génère un rapport HTML"
+inputs:
+  fail_on_critical:
+    description: "Echouer si des vulnérabilités critiques sont détectées (true/false)"
+    required: false
+    default: "true"
+  severity:
+    description: "Niveau de sévérité à analyser (LOW, MEDIUM, HIGH, CRITICAL)"
+    required: false
+    default: "HIGH,CRITICAL"
+runs:
+  using: "composite"
+  steps:
+    - name: Detect Project Type
+      uses: avenirs-esr/avenirs-workflows/.github/actions/detect-project-type@main
+
+    - name: Download Trivy Template
+      uses: actions/download-artifact@v4
+      with:
+        name: trivy-template
+        path: trivy-template
+
+    - name: Create Directory for Security Report
+      run: |
+          mkdir -p dependency-check-report
+          echo "Répertoire de rapport de sécurité créé."
+      shell: bash
+
+    - name: Security Scan with Trivy (Java)
+      if: env.project_type == 'java'
+      uses: aquasecurity/trivy-action@0.30.0
+      with:
+        scan-type: "fs"
+        severity: ${{ inputs.severity }}
+        ignore-unfixed: false
+        format: "template"
+        template: "@./trivy-template/html.tpl"
+        output: "dependency-check-report/security-report.html"
+        exit-code: ${{ inputs.fail_on_critical == 'true' && '1' || '0' }}
+
+    - name: Security Scan with Trivy (Node.js)
+      if: env.project_type == 'node'
+      uses: aquasecurity/trivy-action@0.30.0
+      with:
+        scan-type: "fs"
+        severity: ${{ inputs.severity }}
+        ignore-unfixed: false
+        format: "template"
+        template: "@./trivy-template/html.tpl"
+        output: "dependency-check-report/security-report.html"
+        exit-code: ${{ inputs.fail_on_critical == 'true' && '1' || '0' }}
+
+    - name: Afficher le résumé du rapport
+      run: |
+        echo "Résumé du rapport de sécurité :"
+        if [ -f "dependency-check-report/security-report.html" ]; then
+          echo "Voir le rapport complet dans dependency-check-report/security-report.html."
+        else
+          echo "Aucun rapport de sécurité trouvé."
+        fi
+      shell: bash

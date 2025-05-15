@@ -1,0 +1,27 @@
+name: "Stop Workflow"
+description: "Stops the workflow"
+inputs:
+
+  disabled:
+    description: "Determines if the stop workflow action is disabled"
+    required: false
+    default: "false"
+  message:
+    description: "Message to display"
+    required: false
+    default: "Stopping the workflow"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Execute stop workflow logic
+      if: ${{ inputs.disabled == 'false' }}
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        STOP_ON_ERROR: ${{ inputs.stop_on_error }}
+        MESSAGE: ${{ inputs.message }}
+      run: |
+          echo "Stopping workflow on error: $MESSAGE"
+          echo "!!!! WARNING: the cache are not created/updated"
+          exit 1

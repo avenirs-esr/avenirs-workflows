@@ -1,0 +1,143 @@
+name: "Setup CAS"
+description: "Builds and starts the CAS environment with optional image rebuild"
+inputs:
+    rebuild:
+      description: "Force Docker image rebuild"
+      required: false
+      default: "false"
+    version:
+      description: "cas version"
+      required: false
+      default: "6.6"
+    docker_image:
+      description: "Label for the docker image"
+      required: false
+      default: "avenirs-cas-custom:6.6.15.2"
+runs:
+  using: "composite"
+
+  steps:
+    - name: Cache Docker Images for CAS
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.docker-cache-cas
+        key: docker-cas-cache-${{inputs.version}}-${{ hashFiles('.github/actions/setup-cas/settings/**') }}
+        restore-keys: |
+          docker-cas-
+
+    - name: Ensure Cache Directory Exists
+      run: |
+        mkdir -p /tmp/.docker-cache-cas
+        echo "Cache directory ensured: /tmp/.docker-cache-cas"
+      shell: bash
+
+    - name: Verify Cache Restoration
+      run: |
+        if [ -d /tmp/.docker-cache-cas ]; then
+          echo "Cache directory exists: /tmp/.docker-cache-cas"
+          ls -alh /tmp/.docker-cache-cas
+        else
+          echo "Cache directory not found."
+        fi
+      shell: bash
+
+    - name: Load Docker Images from Cache
+      run: |
+        if [ -f /tmp/.docker-cache-cas/avenirs-cas-custom.tar ]; then
+          docker load -i /tmp/.docker-cache-cas/avenirs-cas-custom.tar
+          echo "Docker image loaded from cache."
+        else
+          echo "No cached Docker image found to load."
+        fi
+      shell: bash
+
+    - name: Check if CAS Docker Image Exists
+      id: check-image
+      run: |
+        if docker image inspect ${{inputs.docker_image}} > /dev/null 2>&1; then
+          echo "Docker inspect image: Valid image found"
+          echo "exists=true" >> $GITHUB_ENV
+        else
+          echo "Docker inspect image: Valid image not found"
+          echo "exists=false" >> $GITHUB_ENV
+        fi
+      shell: bash
+
+    - name: Check if Image Rebuild is Forced
+      run: |
+        if [[ "${{ inputs.rebuild }}" == "true" ]]; then
+          echo "Force rebuild: true"
+          echo "exists=false" >> $GITHUB_ENV
+        else
+          echo "Force rebuild: false"
+        fi
+      shell: bash
+
+    - name: Build Docker image if not cached or forced
+      if: ${{ env.exists == 'false' }}
+      run: |
+        git clone https://github.com/apereo/cas-overlay-template.git
+        cd cas-overlay-template
+        git checkout remotes/origin/${{inputs.version}}
+        cp ../.github/actions/setup-cas/settings/build.gradle build.gradle
+        cp ../.github/actions/setup-cas/settings/Dockerfile Dockerfile
+        cp -r ../.github/actions/setup-cas/settings/etc/* etc/
+        docker build -t ${{inputs.docker_image}} .
+      shell: bash
+
+    - name: Save Docker image to Cache
+      if: ${{ env.exists == 'false' }}
+      run: |
+        docker save ${{inputs.docker_image}} -o /tmp/.docker-cache-cas/avenirs-cas-custom.tar
+        echo "Docker image saved to cache."
+        ls -alh /tmp/.docker-cache-cas
+      shell: bash
+
+    - name: Start CAS Container
+      run: |
+        docker run -d --name avenirs-cas \
+        --network avenirs-network \
+        -p 443:8443 -p 8080:8080 \
+        ${{inputs.docker_image}}
+      shell: bash
+
+    - name: Wait for CAS to be ready
+      run: |
+        echo "Waiting for CAS to be ready..."
+        sleep 20
+        set +e
+        for i in {1..10}; do
+          STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost/cas/login)
+          if [ "$STATUS" -eq 200 ]; then
+            echo "CAS is ready."
+            break
+          fi
+          echo "CAS is not ready yet... retrying in 10 seconds. Current status: $STATUS"
+          sleep 10
+        done
+      shell: bash
+
+    - name: (DEBUG) Display CAS Startup Logs
+      if: ${{ false }}
+      run: docker logs avenirs-cas
+      shell: bash
+
+    - name: (DEBUG) Display /etc/cas content
+      if: ${{ false }}
+      run: docker exec avenirs-cas ls -lR /etc/cas
+      shell: bash
+
+    - name: (DEBUG) Display CAS OIDC config
+      if: ${{ false }}
+      run: curl -k https://localhost/cas/oidc/.well-known/openid-configuration
+      shell: bash
+
+    - name: (DEBUG) Test CAS Accessibility Inside Container
+      if: ${{ false }}
+      run: docker exec avenirs-cas curl -v -k https://localhost:8443/cas/login
+      shell: bash
+
+    - name: (DEBUG) Test CAS Accessibility Outside Container
+      if: ${{ false }}
+      run: curl -v -k https://localhost:443/cas/login
+      shell: bash

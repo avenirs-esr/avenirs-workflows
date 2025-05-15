@@ -1,0 +1,19 @@
+name: "Detect Project Type"
+description: "Detects the project type (Java or Node.js) and sets the environment variable accordingly"
+runs:
+  using: "composite"
+  steps:
+    - name: Detect Project Type
+      id: detect_project_type
+      run: |
+        if [ -f "pom.xml" ]; then
+          echo "Project type detected: Java"
+          echo "project_type=java" >> $GITHUB_ENV
+        elif [ -f "package.json" ]; then
+          echo "Project type detected: Node.js"
+          echo "project_type=node" >> $GITHUB_ENV
+        else
+          echo "Unknown project type. Please ensure you are in a Java or Node.js project directory."
+          exit 1
+        fi
+      shell: bash

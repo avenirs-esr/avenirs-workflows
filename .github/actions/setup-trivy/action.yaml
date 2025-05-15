@@ -1,0 +1,15 @@
+name: "Setup Trivy"
+description: "Installe Trivy"
+runs:
+  using: "composite"
+  steps:
+    - name: Check if Trivy is already installed
+      run: |
+        if ! command -v trivy &> /dev/null; then
+          echo "Trivy not found. Installing..."
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+          sudo mv ./bin/trivy /usr/local/bin/trivy
+        else
+          echo "Trivy is already installed."
+        fi
+      shell: bash

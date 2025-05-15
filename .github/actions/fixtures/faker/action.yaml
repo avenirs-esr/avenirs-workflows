@@ -1,0 +1,103 @@
+name: "Fixtures"
+description: "Generate fixtures with faker"
+inputs:
+
+  postgres_host:
+    description: "Postgres host"
+    required: false
+    default: "localhost"
+
+  postgres_port:
+    description: "Postgres port"
+    required: false
+    default: "65432"
+
+  postgres_user:
+    description: "Postgres user"
+    required: false
+    default: $POSTGRES_USER
+
+  postgres_db:
+    description: "Postgres database"
+    required: false
+    default: "$POSTGRES_DB"
+
+  ldap_admin:
+    description: "LDAP Admin"
+    required: true
+
+  ldap_admin_password:
+    description: "LDAP Admin password"
+    required: true
+
+  ldap_fixtures:
+    description: "LDAP fixtures"
+    required: false
+    default: "target/fixtures/principal.ldif"
+
+  faker_file:
+    description: "Faker file name"
+    required: false
+    default: "faker-fixtures.py"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Cache Python Dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: python-cache-${{ runner.os }}-${{ hashFiles(inputs.faker_file) }}
+        restore-keys: |
+          python-cache-${{ runner.os }}-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install faker
+      shell: bash
+
+    - name: Run Faker
+      run: |
+        python faker-fixtures.py
+      shell: bash
+
+    - name: Install Liquibase
+      run: |
+        wget https://github.com/liquibase/liquibase/releases/download/v4.23.2/liquibase-4.23.2.tar.gz
+        mkdir -p $HOME/liquibase
+        tar -xzf liquibase-4.23.2.tar.gz -C $HOME/liquibase
+        echo "$HOME/liquibase" >> $GITHUB_PATH
+      shell: bash
+
+    - name: Verify Liquibase Installation
+      run: liquibase --version
+      shell: bash
+
+    - name: Load fixtures in DB
+      run: |
+        liquibase   --url="jdbc:postgresql://localhost:65432/avenirs_access_control"\
+          --username="avenirs_security_admin"\
+          --password="S33c@DM4avn"\
+          --driver="org.postgresql.Driver"\
+          --changeLogFile=fixtures-changelog.yaml\
+          --searchPath="target/fixtures/" update
+      shell: bash
+
+    - name: Copy LDIF File to Container
+      run: docker cp ${{inputs.ldap_fixtures}} avenirs-openldap:/tmp/openldap-fixtures.ldif
+      shell: bash
+    - name: Copy LDIF File to Container
+      run: docker cp ${{inputs.ldap_fixtures}} avenirs-openldap:/tmp/faker-fixtures.ldif
+      shell: bash
+
+    - name: Load fixtures in LDAP
+      run: |
+        docker exec avenirs-openldap ldapadd -x -D "${{inputs.ldap_admin}}" -w ${{inputs.ldap_admin_password}} -f /tmp/faker-fixtures.ldif
+      shell: bash
+

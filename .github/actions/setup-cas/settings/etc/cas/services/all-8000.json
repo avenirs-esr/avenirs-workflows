@@ -1,0 +1,18 @@
+{
+    "@class" : "org.apereo.cas.services.CasRegisteredService",
+    "serviceId": "https?://(localhost|srv-dev-avenirs?(\\.srv-avenirs?\\.brgm\\.recia\\.net)?)(/.*)*",
+    "name" : "ALL",
+    "id" : 8000,
+    "evaluationOrder" : "8000",
+    "attributeReleasePolicy" : {
+    "@class" : "org.apereo.cas.services.ReturnAllowedAttributeReleasePolicy",
+	  "allowedAttributes" : [ "java.util.ArrayList",
+				[ "cn",
+				  "mail",
+				  "sn",
+				  "uid",
+				  "givenName",
+				  "displayName"
+				] ]
+  }
+}

@@ -1,0 +1,60 @@
+name: "Unit tests and code coverage"
+description: "Compiles and runs Spring tests with coverage analysis"
+inputs:
+  ignore_ssl_verification:
+    description: "Flag to determine if an env file should be generated to ignore ssl verification"
+    required: false
+    default: "true"
+  import_certificate_from_localhost:
+    description: "Flag to determine if the certificate should be imported localhost"
+    required: false
+    default: "true"
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+            distribution: 'temurin'
+            java-version: '21'
+
+    - name: Cache Maven Dependencies
+      uses: actions/cache@v4
+      with:
+          path: ~/.m2/repository
+          key: maven-cache-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-cache-
+
+    - name: Generate env.properties to Ignore SSL Verification
+      if: ${{inputs.ignore_ssl_verification == 'true'}}
+      run: |
+        echo "spring.security.oauth2.client.registration.custom-client-provider.provider.ssl-verification=false" > src/main/resources/env.properties
+        echo "spring.ssl.ignore=true" >> src/main/resources/env.properties
+        echo "spring.cloud.openfeign.ssl.skip-ssl-validation=true" >> src/main/resources/env.properties
+        echo "server.ssl.enabled=false" >> src/main/resources/env.properties
+        echo "avenirs.authentication.oidc.provider=localhost" >> src/main/resources/env.properties
+
+        cat src/main/resources/env.properties
+      shell: bash
+
+    - name: Import Certificate into JVM TrustStore
+      if: ${{inputs.import_certificate_from_localhost == 'true'}}
+      run: |
+          keytool -printcert -rfc -sslserver localhost:443 > /tmp/localhost.crt
+          keytool -printcert -file /tmp/localhost.crt
+          sudo keytool -importcert -file /tmp/localhost.crt -alias localhost -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
+
+      shell: bash
+
+    - name: Build and Test
+      run: |
+         ./mvnw clean compile javadoc:javadoc test jacoco:report
+      shell: bash
+
+    - name: Generate JaCoCo Report
+      run: |
+        mkdir -p jacoco-report
+        cp -r target/site/jacoco jacoco-report/
+        echo "JaCoCo report generated."
+      shell: bash
