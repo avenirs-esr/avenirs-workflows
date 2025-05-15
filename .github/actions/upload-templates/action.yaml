@@ -5,7 +5,7 @@ runs:
   steps:
     - name: Download GitHub Page Template and Trivy Template
       run: |
-        curl -L https://github.com/avenirs-esr/avenirs-workflows/archive/refs/heads/feat/core-actions-workflows.tar.gz | tar -xz -C /tmp
+        curl -L https://github.com/avenirs-esr/avenirs-workflows/archive/refs/heads/main.tar.gz | tar -xz -C /tmp
         mv /tmp/avenirs-workflows-*/gh-page-template /tmp/gh-page-template
         mv /tmp/avenirs-workflows-*/trivy-template /tmp/trivy-template
       shell: bash

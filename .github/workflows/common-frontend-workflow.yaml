@@ -27,7 +27,7 @@ jobs:
           ref: ${{ github.head_ref }}
 
       - name: Setup Node.js et npm install
-        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@feat/core-actions-workflows
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
 
       - name: Cache node_modules
         id: cache-node-modules
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🔎 Lint code
-        uses: avenirs-esr/avenirs-workflows/.github/actions/linting-scan@feat/core-actions-workflows
+        uses: avenirs-esr/avenirs-workflows/.github/actions/linting-scan@main
 
   build:
     needs: setup

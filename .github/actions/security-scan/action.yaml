@@ -13,7 +13,7 @@ runs:
   using: "composite"
   steps:
     - name: Detect Project Type
-      uses: avenirs-esr/avenirs-workflows/.github/actions/detect-project-type@feat/core-actions-workflows
+      uses: avenirs-esr/avenirs-workflows/.github/actions/detect-project-type@main
 
     - name: Download Trivy Template
       uses: actions/download-artifact@v4
