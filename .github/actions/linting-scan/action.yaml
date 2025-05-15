@@ -4,7 +4,7 @@ inputs:
   fail_if_unformatted:
     description: "Echoue si du code n'est pas correctement formaté (true/false)"
     required: false
-    default: "true"
+    default: true
 runs:
   using: "composite"
   steps:
@@ -44,7 +44,9 @@ runs:
 
         if [ "$has_unformatted" = true ]; then
           echo "</ul><p><strong>🚫 Des fichiers Java sont mal formatés.</strong></p></body></html>" >> lint/formatting-report.html
-          exit 1
+          if [ "${{ inputs.fail_if_unformatted }}" = true ]; then
+            exit 1
+          fi
         else
           echo "</ul><p><strong>✅ Tout le code Java est correctement formaté.</strong></p></body></html>" >> lint/formatting-report.html
         fi

@@ -4,7 +4,7 @@ inputs:
   fail_on_critical:
     description: "Echouer si des vulnérabilités critiques sont détectées (true/false)"
     required: false
-    default: "true"
+    default: true
   severity:
     description: "Niveau de sévérité à analyser (LOW, MEDIUM, HIGH, CRITICAL)"
     required: false
@@ -12,9 +12,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Detect Project Type
-      uses: avenirs-esr/avenirs-workflows/.github/actions/detect-project-type@main
-
     - name: Download Trivy Template
       uses: actions/download-artifact@v4
       with:
@@ -27,8 +24,7 @@ runs:
           echo "Répertoire de rapport de sécurité créé."
       shell: bash
 
-    - name: Security Scan with Trivy (Java)
-      if: env.project_type == 'java'
+    - name: Security Scan with Trivy (Generate HTML Report)
       uses: aquasecurity/trivy-action@0.30.0
       with:
         scan-type: "fs"
@@ -37,19 +33,16 @@ runs:
         format: "template"
         template: "@./trivy-template/html.tpl"
         output: "dependency-check-report/security-report.html"
-        exit-code: ${{ inputs.fail_on_critical == 'true' && '1' || '0' }}
 
-    - name: Security Scan with Trivy (Node.js)
-      if: env.project_type == 'node'
+    - name: Security Scan with Trivy (Critical Only)
+      if: ${{ inputs.fail_on_critical == true }}
       uses: aquasecurity/trivy-action@0.30.0
       with:
         scan-type: "fs"
-        severity: ${{ inputs.severity }}
+        severity: "CRITICAL"
         ignore-unfixed: false
-        format: "template"
-        template: "@./trivy-template/html.tpl"
-        output: "dependency-check-report/security-report.html"
-        exit-code: ${{ inputs.fail_on_critical == 'true' && '1' || '0' }}
+        format: "table"
+        exit-code: 1
 
     - name: Afficher le résumé du rapport
       run: |
