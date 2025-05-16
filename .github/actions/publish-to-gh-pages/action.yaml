@@ -110,6 +110,30 @@ runs:
         fi
       shell: bash
 
+    - name: Copy Javadoc (if exists)
+      if: ${{ inputs.javadoc_dir }}
+      run: |
+        if [ -d "${{ inputs.javadoc_dir }}" ]; then
+          mkdir -p ${{ inputs.publish_dir }}/docs/${{ inputs.javadoc_dir }}
+          cp -r ${{ inputs.javadoc_dir }}/* ${{ inputs.publish_dir }}/docs/${{ inputs.javadoc_dir }}/
+          echo "Javadoc copied to GitHub Pages."
+        else
+          echo "No Javadoc found. Skipping."
+        fi
+      shell: bash
+
+    - name: Copy Load Tests Reports (if exists)
+      if: ${{ inputs.loading_report_dir }}
+      run: |
+        if [ -d "${{ inputs.loading_report_dir }}" ]; then
+          mkdir -p ${{ inputs.publish_dir }}/docs/${{ inputs.loading_report_dir }}
+          cp -r ${{ inputs.loading_report_dir }}/* ${{ inputs.publish_dir }}/docs/${{ inputs.loading_report_dir }}/
+          echo "Loading reports copied to GitHub Pages."
+        else
+          echo "No loading reports found. Skipping."
+        fi
+      shell: bash
+
     - name: Publish Reports to GitHub Pages
       uses: peaceiris/actions-gh-pages@v4
       with:
