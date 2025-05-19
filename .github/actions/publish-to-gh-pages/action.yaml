@@ -64,7 +64,7 @@ runs:
       shell: bash
 
     - name: Modify GitHub Page Template
-      uses: avenirs-esr/avenirs-workflows/.github/actions/update-gh-pages-template@main
+      uses: avenirs-esr/avenirs-workflows/.github/actions/update-gh-pages-template@feat/core-actions-flexibility
       with:
         page_title: ${{ inputs.page_title }}
         publish_dir: ${{ inputs.publish_dir }}
