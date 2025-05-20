@@ -113,9 +113,9 @@ runs:
     - name: Copy Javadoc (if exists)
       if: ${{ inputs.javadoc_dir }}
       run: |
-        if [ -d "${{ inputs.javadoc_dir }}" ]; then
+        if [ -d "${{ inputs.publish_dir }}/${{ inputs.javadoc_dir }}" ]; then
           mkdir -p ${{ inputs.publish_dir }}/docs/${{ inputs.javadoc_dir }}
-          cp -r ${{ inputs.javadoc_dir }}/* ${{ inputs.publish_dir }}/docs/${{ inputs.javadoc_dir }}/
+          cp -r ${{ inputs.publish_dir }}/${{ inputs.javadoc_dir }}/* ${{ inputs.publish_dir }}/docs/${{ inputs.javadoc_dir }}/
           echo "Javadoc copied to GitHub Pages."
         else
           echo "No Javadoc found. Skipping."
