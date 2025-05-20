@@ -11,6 +11,10 @@ Ce fichier suit tous les changements notables apportés à ce dépôt, selon le 
 
 ---
 
+## [v1.0.1] - 2025-05-22
+
+- Téléchargement du ar pour jasypt pour que l'action setup-postgres soit autonome.
+
 ## [v1.0.0] - 2025-05-14
 
 ### 🚀 Initial Release
