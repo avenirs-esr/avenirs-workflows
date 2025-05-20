@@ -42,14 +42,6 @@ runs:
         # Générer la liste dynamique des rapports
         reports=""
 
-        # Afficher tous les répertoires
-        echo "Répertoires disponibles :"
-        ls -d ./*
-
-        # Afficher tous les répertoires dans publish-dir
-        echo "Répertoires disponibles :"
-        ls -d ${{ inputs.publish_dir }}/*
-
         if [ -d "${{ inputs.publish_dir }}/${{ inputs.javadoc_dir }}" ]; then
         reports+="<li><a href='${{ inputs.javadoc_dir }}/index.html' target='_blank'>Documentation Javadoc</a></li>"
         fi
