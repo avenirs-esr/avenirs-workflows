@@ -15,6 +15,12 @@ on:
       page_title:
         type: string
         default: "${{ github.event.repository.name }} - Documentation"
+      lint_fail_on_error:
+        type: boolean
+        default: true
+      security_fail_on_critical:
+        type: boolean
+        default: true
 
 jobs:
   setup:
@@ -39,6 +45,8 @@ jobs:
           ref: ${{ github.head_ref }}
       - name: 🔎 Lint code
         uses: avenirs-esr/avenirs-workflows/.github/actions/linting-scan@main
+        with:
+          fail_if_unformatted: ${{ inputs.lint_fail_on_error }}
       - name: 📦 Save Linting Report
         if: ${{ hashFiles('lint/**') != '' }}
         uses: actions/upload-artifact@v4
@@ -58,6 +66,8 @@ jobs:
           ref: ${{ github.head_ref }}
       - name: 🔒 Security scan
         uses: avenirs-esr/avenirs-workflows/.github/actions/security-scan@main
+        with:
+          fail_on_critical: ${{ inputs.security_fail_on_critical }}
       - name: 📦 Save Security Report
         if: ${{ hashFiles('dependency-check-report/**') != '' }}
         uses: actions/upload-artifact@v4

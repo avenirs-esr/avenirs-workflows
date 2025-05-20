@@ -42,8 +42,8 @@ runs:
         # Générer la liste dynamique des rapports
         reports=""
 
-        if [ -d "${{ inputs.javadoc_dir }}" ]; then
-        reports+="<li><a href='apidocs/index.html' target='_blank'>Documentation Javadoc</a></li>"
+        if [ -d "${{ inputs.publish_dir }}/${{ inputs.javadoc_dir }}" ]; then
+        reports+="<li><a href='${{ inputs.javadoc_dir }}/index.html' target='_blank'>Documentation Javadoc</a></li>"
         fi
 
         if [ -d "${{ inputs.jacoco_report_dir }}" ]; then
