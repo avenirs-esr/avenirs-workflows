@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 1
           ref: ${{ github.head_ref }}
       - name: 📤 Upload Templates
-        uses: avenirs-esr/avenirs-workflows/.github/actions/upload-templates@fix/core-upload-templates
+        uses: avenirs-esr/avenirs-workflows/.github/actions/upload-templates@main
   lint:
     if: ${{ inputs.run_lint }}
     runs-on: ubuntu-latest
