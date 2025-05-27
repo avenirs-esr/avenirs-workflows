@@ -5,19 +5,19 @@ runs:
   steps:
     - name: Download GitHub Page Template and Trivy Template
       run: |
-        curl -L https://github.com/avenirs-esr/avenirs-workflows/archive/refs/heads/main.tar.gz | tar -xz -C /tmp
-        mv /tmp/avenirs-workflows-*/gh-page-template /tmp/gh-page-template
-        mv /tmp/avenirs-workflows-*/trivy-template /tmp/trivy-template
+        git clone --depth 1 --filter=blob:none --sparse https://github.com/avenirs-esr/avenirs-workflows.git /tmp/avenirs-workflows
+        cd /tmp/avenirs-workflows
+        git sparse-checkout set gh-page-template trivy-template
       shell: bash
 
     - name: 📦 Save Github Pages Template
       uses: actions/upload-artifact@v4
       with:
         name: gh-page-template
-        path: /tmp/gh-page-template
+        path: /tmp/avenirs-workflows/gh-page-template
 
     - name: 📦 Save Trivy Template
       uses: actions/upload-artifact@v4
       with:
         name: trivy-template
-        path: /tmp/trivy-template
+        path: /tmp/avenirs-workflows/trivy-template
