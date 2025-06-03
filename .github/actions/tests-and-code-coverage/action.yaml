@@ -1,4 +1,4 @@
-name: "Unit tests and code coverage"
+name: "Unit tests, integration tests and code coverage"
 description: "Compiles and runs Spring tests with coverage analysis"
 inputs:
   ignore_ssl_verification:
@@ -49,7 +49,7 @@ runs:
 
     - name: Build and Test
       run: |
-         ./mvnw clean compile javadoc:javadoc test jacoco:report
+         ./mvnw clean compile javadoc:javadoc verify
       shell: bash
 
     - name: Generate JaCoCo Report

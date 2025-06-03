@@ -88,7 +88,7 @@ jobs:
       - name: ⬆️ Grant execution permissions for Maven Wrapper
         run: chmod +x ./mvnw
       - name: 🧪 Run tests and generate coverage report
-        uses: avenirs-esr/avenirs-workflows/.github/actions/unit-tests-and-code-coverage@main
+        uses: avenirs-esr/avenirs-workflows/.github/actions/tests-and-code-coverage@feat/integration-tests
         with:
           ignore_ssl_verification: "true"
           import_certificate_from_localhost: "false"
