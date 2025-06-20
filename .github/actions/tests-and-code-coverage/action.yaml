@@ -10,8 +10,9 @@ inputs:
     required: false
     default: "true"
   run_integration_tests:
-    type: boolean
-    default: true
+    description: "Flag to determine if integration tests should be run"
+    required: false
+    default: "true"
 runs:
   using: "composite"
   steps:
@@ -51,15 +52,15 @@ runs:
       shell: bash
 
     - name: Build and run unit + integration tests
-      if: ${{ inputs.run_integration_tests == true }}
+      if: ${{ inputs.run_integration_tests == 'true' }}
       run: |
         ./mvnw clean compile javadoc:javadoc verify
       shell: bash
 
     - name: Build and run only unit tests
-      if: ${{ inputs.run_integration_tests == false }}
+      if: ${{ inputs.run_integration_tests == 'false' }}
       run: |
-        ./mvnw clean compile javadoc:javadoc test
+        ./mvnw clean compile javadoc:javadoc test jacoco:report
       shell: bash
 
 
