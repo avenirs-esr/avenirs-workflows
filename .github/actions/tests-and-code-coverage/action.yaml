@@ -10,8 +10,9 @@ inputs:
     required: false
     default: "true"
   run_integration_tests:
-    type: boolean
-    default: true
+    description: "Flag to determine if integration tests should be run"
+    required: false
+    default: "true"
 runs:
   using: "composite"
   steps:
@@ -30,7 +31,7 @@ runs:
             maven-cache-
 
     - name: Generate env.properties to Ignore SSL Verification
-      if: ${{inputs.ignore_ssl_verification == 'true'}}
+      if: inputs.ignore_ssl_verification == 'true'
       run: |
         echo "spring.security.oauth2.client.registration.custom-client-provider.provider.ssl-verification=false" > src/main/resources/env.properties
         echo "spring.ssl.ignore=true" >> src/main/resources/env.properties
@@ -42,7 +43,7 @@ runs:
       shell: bash
 
     - name: Import Certificate into JVM TrustStore
-      if: ${{inputs.import_certificate_from_localhost == 'true'}}
+      if: inputs.import_certificate_from_localhost == 'true'
       run: |
           keytool -printcert -rfc -sslserver localhost:443 > /tmp/localhost.crt
           keytool -printcert -file /tmp/localhost.crt
@@ -51,15 +52,15 @@ runs:
       shell: bash
 
     - name: Build and run unit + integration tests
-      if: ${{ inputs.run_integration_tests == true }}
+      if: inputs.run_integration_tests == 'true'
       run: |
         ./mvnw clean compile javadoc:javadoc verify
       shell: bash
 
     - name: Build and run only unit tests
-      if: ${{ inputs.run_integration_tests == false }}
+      if: inputs.run_integration_tests == 'false'
       run: |
-        ./mvnw clean compile javadoc:javadoc test
+        ./mvnw clean compile javadoc:javadoc test jacoco:report
       shell: bash
 
 
