@@ -1,0 +1,93 @@
+name: Deploy on dev server
+on:
+  push:
+
+jobs:
+  vpn_ssh_check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check secrets presence (fail fast)
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.SSH_KEY }}" ] || [ -z "${{ secrets.OPENVPN_CONF_B64 }}" ]; then
+          echo "::error title=Missing secrets::SSH_KEY or OPENVPN_CONF_B64 is not set"
+          exit 1
+          fi
+          echo "${{ secrets.OPENVPN_CONF_B64 }}" | base64 -d >/dev/null 2>&1 || { echo "::error::OPENVPN_CONF_B64 is not valid base64"; exit 1; }
+          ssh-keygen -yf <(printf '%s\n' "${{ secrets.SSH_KEY }}") >/dev/null 2>&1 || { echo "::error::SSH_KEY is not a valid private key"; exit 1; }
+
+      - name: Install OpenVPN & tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openvpn net-tools iproute2
+
+      - name: Write OpenVPN config from secret
+        run: |
+          echo "${{ secrets.OPENVPN_CONF_B64 }}" | base64 -d > client.ovpn
+          echo "auth-nocache" >> client.ovpn
+          chmod 600 client.ovpn
+
+      - name: Start OpenVPN (daemon) and wait for tun0
+        run: |
+          set -euo pipefail
+
+          if [ ! -c /dev/net/tun ]; then
+          echo "::error::/dev/net/tun n'est pas disponible sur ce runner"
+          exit 1
+          fi
+
+          grep -qE '^\s*auth-nocache\s*$' client.ovpn || echo "auth-nocache" >> client.ovpn
+          grep -qE '^\s*connect-timeout\s+' client.ovpn || echo "connect-timeout 20" >> client.ovpn
+          grep -qE '^\s*connect-retry-max\s+' client.ovpn || echo "connect-retry-max 2" >> client.ovpn
+          grep -qE '^\s*resolv-retry\s+' client.ovpn     || echo "resolv-retry 5" >> client.ovpn
+          grep -qE '^\s*auth-retry\s+' client.ovpn || echo "auth-retry nointeract" >> client.ovpn
+
+          sudo openvpn --config client.ovpn --daemon --writepid /tmp/openvpn.pid --log /tmp/openvpn.log
+          echo "Waiting for VPN connection (tun0)..."
+          for i in {1..30}; do
+            if ip addr show tun0 >/dev/null 2>&1; then
+              echo "VPN connected (tun0 is up)."
+              ip addr show tun0
+              break
+            fi
+            echo "Waiting for tun0... ($i/30)"
+            sleep 2
+          done
+          if ! ip addr show tun0 >/dev/null 2>&1; then
+            echo "::error::VPN connection failed (tun0 not found)"
+            echo "Last OpenVPN log lines:"
+            sudo tail -n 20 /tmp/openvpn.log || true
+            exit 1
+          fi
+          echo "VPN connection established."
+
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Trust target host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ vars.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Test SSH and exit
+        run: |
+          ssh -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=20 \
+            "${{ vars.SSH_USER }}@${{ vars.SSH_HOST }}" "echo 'SSH OK on $(hostname)'; true"
+
+      - name: Teardown VPN (always)
+        if: always()
+        run: |
+          if [ -f /tmp/openvpn.pid ]; then
+            sudo kill "$(cat /tmp/openvpn.pid)" || true
+            sleep 2
+          fi
+          sudo pkill -f "openvpn --config" || true
+          echo "Last OpenVPN log lines (for diagnostics):"
+          sudo tail -n 80 /tmp/openvpn.log || true
