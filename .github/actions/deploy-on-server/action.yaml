@@ -1,0 +1,101 @@
+name: "Deploy on Server"
+description: "Deploy application on a remote server using SSH"
+inputs:
+  server_ip:
+    description: "IP address of the remote server"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: 🛠️ Install OpenVPN & tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y openvpn net-tools iproute2
+      shell: bash
+
+    - name: 📜 Write OpenVPN config from secret
+      run: |
+        echo "${{ secrets.OPENVPN_CONF_B64 }}" | base64 -d > client.ovpn
+        echo "auth-nocache" >> client.ovpn
+        chmod 600 client.ovpn
+      shell: bash
+
+    - name: 👮‍♂️ Start OpenVPN (daemon) and wait for tun0
+      run: |
+
+        if [ -n "${{ secrets.OPENVPN_USER || '' }}" ] && [ -n "${{ secrets.OPENVPN_PASS || '' }}" ]; then
+          printf "%s\n%s\n" "${{ secrets.OPENVPN_USER }}" "${{ secrets.OPENVPN_PASS }}" > auth.txt
+          chmod 600 auth.txt
+          if grep -qE '^\s*auth-user-pass(\s+\S+)?\s*$' client.ovpn; then
+          sed -i 's/^\s*auth-user-pass\s*$/auth-user-pass auth.txt/' client.ovpn
+          else
+          echo "auth-user-pass auth.txt" >> client.ovpn
+          fi
+        fi
+
+        sudo openvpn --config client.ovpn --daemon --writepid /tmp/openvpn.pid --log /tmp/openvpn.log
+        echo "Waiting for VPN connection (tun0)..."
+        for i in {1..30}; do
+          if ip addr show tun0 >/dev/null 2>&1; then
+            echo "VPN connected (tun0 is up)."
+            ip addr show tun0
+            break
+          fi
+          echo "Waiting for tun0... ($i/30)"
+          sleep 2
+        done
+        if ! ip addr show tun0 >/dev/null 2>&1; then
+          echo "::error::VPN connection failed (tun0 not found)"
+          echo "Last OpenVPN log lines:"
+          sudo tail -n 20 /tmp/openvpn.log || true
+          exit 1
+        fi
+        echo "VPN connection established."
+      shell: bash
+
+    - name: 🔑 Add SSH key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_KEY }}
+
+    - name: 🛡️ Trust target host key
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H "${{ inputs.server_ip }}" >> ~/.ssh/known_hosts
+      shell: bash
+
+    - name: 🚀 Run deploy commands on server
+      run: |
+        ssh -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=20 \
+          "${{ secrets.SSH_USER }}@${{ inputs.server_ip }}" 'bash -lc "
+            echo Connected to \$(hostname)
+
+            export SDKMAN_DIR=\$HOME/.sdkman
+            [ -s \"\$SDKMAN_DIR/bin/sdkman-init.sh\" ] && . \"\$SDKMAN_DIR/bin/sdkman-init.sh\"
+
+            export JAVA_HOME=\$(sdk home java 21.0.4-oracle)
+            export M2_HOME=\$(sdk home maven 3.9.9)
+            export PATH=\$JAVA_HOME/bin:\$M2_HOME/bin:\$PATH
+            export JASYPT_ENCRYPTOR_PASSWORD=\"${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}\"
+
+            export NVM_DIR=\$HOME/.nvm
+            [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
+
+            cd \"${{ secrets.SRV_BASE_PATH }}\" || exit 10
+            ${{ secrets.SRV_DEPLOY_CMD }} || exit 20
+
+            echo Deployment commands executed successfully.
+          "'
+      shell: bash
+
+    - name: 🧹 Teardown VPN (always)
+      if: always()
+      run: |
+        if [ -f /tmp/openvpn.pid ]; then
+          sudo kill "$(cat /tmp/openvpn.pid)" || true
+          sleep 2
+        fi
+        sudo pkill -f "openvpn --config" || true
+        echo "Last OpenVPN log lines (for diagnostics):"
+        sudo tail -n 80 /tmp/openvpn.log || true
+      shell: bash
