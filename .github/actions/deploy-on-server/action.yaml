@@ -4,6 +4,30 @@ inputs:
   server_ip:
     description: "IP address of the remote server"
     required: true
+  openvpn_conf_b64:
+    description: "Base64-encoded .ovpn client file"
+    required: true
+  openvpn_user:
+    description: "OpenVPN username"
+    required: true
+  openvpn_pass:
+    description: "OpenVPN password"
+    required: true
+  ssh_key:
+    description: "SSH private key"
+    required: true
+  ssh_user:
+    description: "SSH user"
+    required: true
+  srv_base_path:
+    description: "Base path on the server where the application is located"
+    required: true
+  srv_deploy_cmd:
+    description: "Command to deploy the application on the server (e.g., ./deploy.sh)"
+    required: true
+  jasypt_encryptor_password:
+    description: "Password for Jasypt encryption"
+    required: true
 runs:
   using: "composite"
   steps:
@@ -15,16 +39,15 @@ runs:
 
     - name: 📜 Write OpenVPN config from secret
       run: |
-        echo "${{ secrets.OPENVPN_CONF_B64 }}" | base64 -d > client.ovpn
+        echo "${{ inputs.openvpn_conf_b64 }}" | base64 -d > client.ovpn
         echo "auth-nocache" >> client.ovpn
         chmod 600 client.ovpn
       shell: bash
 
     - name: 👮‍♂️ Start OpenVPN (daemon) and wait for tun0
       run: |
-
-        if [ -n "${{ secrets.OPENVPN_USER || '' }}" ] && [ -n "${{ secrets.OPENVPN_PASS || '' }}" ]; then
-          printf "%s\n%s\n" "${{ secrets.OPENVPN_USER }}" "${{ secrets.OPENVPN_PASS }}" > auth.txt
+        if [ -n "${{ inputs.openvpn_user || '' }}" ] && [ -n "${{ inputs.openvpn_pass || '' }}" ]; then
+          printf "%s\n%s\n" "${{ inputs.openvpn_user }}" "${{ inputs.openvpn_pass }}" > auth.txt
           chmod 600 auth.txt
           if grep -qE '^\s*auth-user-pass(\s+\S+)?\s*$' client.ovpn; then
           sed -i 's/^\s*auth-user-pass\s*$/auth-user-pass auth.txt/' client.ovpn
@@ -56,7 +79,7 @@ runs:
     - name: 🔑 Add SSH key
       uses: webfactory/ssh-agent@v0.9.0
       with:
-        ssh-private-key: ${{ secrets.SSH_KEY }}
+        ssh-private-key: ${{ inputs.ssh_key }}
 
     - name: 🛡️ Trust target host key
       run: |
@@ -67,7 +90,7 @@ runs:
     - name: 🚀 Run deploy commands on server
       run: |
         ssh -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=20 \
-          "${{ secrets.SSH_USER }}@${{ inputs.server_ip }}" 'bash -lc "
+          "${{ inputs.ssh_user }}@${{ inputs.server_ip }}" 'bash -lc "
             echo Connected to \$(hostname)
 
             export SDKMAN_DIR=\$HOME/.sdkman
@@ -76,13 +99,13 @@ runs:
             export JAVA_HOME=\$(sdk home java 21.0.4-oracle)
             export M2_HOME=\$(sdk home maven 3.9.9)
             export PATH=\$JAVA_HOME/bin:\$M2_HOME/bin:\$PATH
-            export JASYPT_ENCRYPTOR_PASSWORD=\"${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}\"
+            export JASYPT_ENCRYPTOR_PASSWORD=\"${{ inputs.jasypt_encryptor_password }}\"
 
             export NVM_DIR=\$HOME/.nvm
             [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
 
-            cd \"${{ secrets.SRV_BASE_PATH }}\" || exit 10
-            ${{ secrets.SRV_DEPLOY_CMD }} || exit 20
+            cd \"${{ inputs.srv_base_path }}\" || exit 10
+            ${{ inputs.srv_deploy_cmd }} || exit 20
 
             echo Deployment commands executed successfully.
           "'
