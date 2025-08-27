@@ -25,3 +25,11 @@ jobs:
         uses: avenirs-esr/avenirs-workflows/.github/actions/deploy-on-server@feat/518-deploy-workflow
         with:
           server_ip: ${{ env.SERVER_IP }}
+          openvpn_conf_b64: ${{ secrets.OPENVPN_CONF_B64 }}
+          openvpn_user: ${{ secrets.OPENVPN_USER }}
+          openvpn_pass: ${{ secrets.OPENVPN_PASS }}
+          ssh_key: ${{ secrets.SSH_KEY }}
+          ssh_user: ${{ secrets.SSH_USER }}
+          srv_base_path: ${{ secrets.SRV_BASE_PATH }}
+          srv_deploy_cmd: ${{ secrets.SRV_DEPLOY_CMD }}
+          jasypt_encryptor_password: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
