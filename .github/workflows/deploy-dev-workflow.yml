@@ -47,6 +47,16 @@ jobs:
           grep -qE '^\s*resolv-retry\s+' client.ovpn     || echo "resolv-retry 5" >> client.ovpn
           grep -qE '^\s*auth-retry\s+' client.ovpn || echo "auth-retry nointeract" >> client.ovpn
 
+          if [ -n "${{ secrets.OPENVPN_USER || '' }}" ] && [ -n "${{ secrets.OPENVPN_PASS || '' }}" ]; then
+            printf "%s\n%s\n" "${{ secrets.OPENVPN_USER }}" "${{ secrets.OPENVPN_PASS }}" > auth.txt
+            chmod 600 auth.txt
+            if grep -qE '^\s*auth-user-pass(\s+\S+)?\s*$' client.ovpn; then
+            sed -i 's/^\s*auth-user-pass\s*$/auth-user-pass auth.txt/' client.ovpn
+            else
+            echo "auth-user-pass auth.txt" >> client.ovpn
+            fi
+          fi
+
           sudo openvpn --config client.ovpn --daemon --writepid /tmp/openvpn.pid --log /tmp/openvpn.log
           echo "Waiting for VPN connection (tun0)..."
           for i in {1..30}; do
@@ -74,12 +84,12 @@ jobs:
       - name: Trust target host key
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H "${{ vars.SSH_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${{ secrets.SSH_DEV_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Test SSH and exit
         run: |
           ssh -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=20 \
-            "${{ vars.SSH_USER }}@${{ vars.SSH_HOST }}" "echo 'SSH OK on $(hostname)'; true"
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_DEV_HOST }}" "echo 'SSH OK on $(hostname)'; true"
 
       - name: Teardown VPN (always)
         if: always()
