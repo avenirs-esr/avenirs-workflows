@@ -1,0 +1,27 @@
+name: Deploy on remote server
+on:
+  workflow_call:
+    inputs:
+      target_env:
+        required: true
+        description: "Target environment for deployment (dev, qualif, recette)"
+        type: string
+        default: dev
+
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SERVER_IP: ${{ inputs.target_env == 'recette' && secrets.SSH_RECETTE_HOST || inputs.target_env == 'qualif' && secrets.SSH_QUALIF_HOST || secrets.SSH_DEV_HOST }}
+
+    steps:
+      - name: ✅ Checkout
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy application on remote server
+        uses: avenirs-esr/avenirs-workflows/.github/actions/deploy-on-server@feat/518-deploy-workflow
+        with:
+          server_ip: ${{ env.SERVER_IP }}
