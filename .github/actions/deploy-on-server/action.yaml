@@ -35,6 +35,9 @@ inputs:
   maven_version:
     description: "Maven version to use on the server (e.g., 3.9.9)"
     required: true
+  repos_target_keys:
+    description: "Keys for repositories to update in the conf file, separated by ;"
+    required: true
   conf_path:
     description: "Path to the configuration file on the server (if needed)"
     required: false
@@ -117,10 +120,11 @@ runs:
         CONF_DIR='${{ inputs.conf_path }}'
         CONF_FILE='${{ inputs.conf_file }}'
         SRV_DEPLOY_CMD='${{ inputs.srv_deploy_cmd }}'
+        REPOS_TARGET_KEYS='${{ inputs.repos_target_keys }}'
 
         ssh -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=20 \
           "$SSH_USER@$SERVER_IP" 'bash -s --' \
-          "$JAVA_VERSION" "$MAVEN_VERSION" "$JASYPT" "$SRV_BASE_PATH" "$TAG_NAME" "$CONF_DIR" "$CONF_FILE" "$SRV_DEPLOY_CMD" <<'REMOTE'
+          "$JAVA_VERSION" "$MAVEN_VERSION" "$JASYPT" "$SRV_BASE_PATH" "$TAG_NAME" "$CONF_DIR" "$CONF_FILE" "$SRV_DEPLOY_CMD" "$REPOS_TARGET_KEYS" <<'REMOTE'
 
         JAVA_VERSION="$1"
         MAVEN_VERSION="$2"
@@ -130,8 +134,12 @@ runs:
         CONF_DIR="${6:-}"
         CONF_FILE="${7:-}"
         SRV_DEPLOY_CMD="$8"
+        REPOS_TARGET_KEYS="$9"
 
         echo "Connected to $(hostname)"
+
+        echo "variable avant ssh : ${REPOS_TARGET_KEYS:-}"
+        echo "variable avant ssh v2 : ${REPOS_TARGET_KEYS}"
 
         export SDKMAN_DIR="$HOME/.sdkman"
         [ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ] && . "$SDKMAN_DIR/bin/sdkman-init.sh"
@@ -157,10 +165,17 @@ runs:
                 'services/avenirs-portfolio/avenirs-portfolio-api'
               )
               for k in "${keys[@]}"; do
+                echo "Clé en cours de modification: $k dans $CONF_PATH"
+                k="$(echo "$k" | xargs)"
+                [ -n "$k" ] || continue
                 sed -i -E "s|^([[:space:]]*)${k}([[:space:]]*)=([[:space:]]*).*$|\1${k} = ${esc_tag}|" "$CONF_PATH"
               done
               echo "✔ Conf mise à jour :"
-              grep -E "^( *services/avenirs-portfolio/(avenirs-cofolio-client|avenirs-portfolio-api))" "$CONF_PATH" || true
+              for k in "${keys[@]}"; do
+                echo "Après modification: $k dans $CONF_PATH"
+                k="$(echo "$k" | xargs)"; [ -n "$k" ] || continue
+                grep -E "^ *${k} *=" "$CONF_PATH" || true
+              done
             else
               echo "Fichier de conf introuvable: $CONF_PATH" >&2
             fi
