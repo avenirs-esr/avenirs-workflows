@@ -172,6 +172,8 @@ runs:
           fi
         fi
 
+        "$SRV_DEPLOY_CMD" || exit 20
+
         echo "Deployment commands executed successfully."
         REMOTE
       shell: bash
