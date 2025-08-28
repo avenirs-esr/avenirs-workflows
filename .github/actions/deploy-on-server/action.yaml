@@ -1,5 +1,6 @@
 name: "Deploy on Server"
 description: "Deploy application on a remote server using SSH"
+
 inputs:
   server_ip:
     description: "IP address of the remote server"
@@ -28,6 +29,23 @@ inputs:
   jasypt_encryptor_password:
     description: "Password for Jasypt encryption"
     required: true
+  java_version:
+    description: "Java version to use on the server (e.g., 21.0.4-oracle)"
+    required: true
+  maven_version:
+    description: "Maven version to use on the server (e.g., 3.9.9)"
+    required: true
+  conf_path:
+    description: "Path to the configuration file on the server (if needed)"
+    required: false
+  conf_file:
+    description: "Configuration file name (if needed)"
+    required: false
+  tag_name:
+    description: "Tag name for the deployment (if needed)"
+    required: false
+    default: ""
+
 runs:
   using: "composite"
   steps:
@@ -50,9 +68,9 @@ runs:
           printf "%s\n%s\n" "${{ inputs.openvpn_user }}" "${{ inputs.openvpn_pass }}" > auth.txt
           chmod 600 auth.txt
           if grep -qE '^\s*auth-user-pass(\s+\S+)?\s*$' client.ovpn; then
-          sed -i 's/^\s*auth-user-pass\s*$/auth-user-pass auth.txt/' client.ovpn
+            sed -i 's/^\s*auth-user-pass\s*$/auth-user-pass auth.txt/' client.ovpn
           else
-          echo "auth-user-pass auth.txt" >> client.ovpn
+            echo "auth-user-pass auth.txt" >> client.ovpn
           fi
         fi
 
@@ -89,26 +107,68 @@ runs:
 
     - name: 🚀 Run deploy commands on server
       run: |
+        SSH_USER='${{ inputs.ssh_user }}'
+        SERVER_IP='${{ inputs.server_ip }}'
+        JAVA_VERSION='${{ inputs.java_version }}'
+        MAVEN_VERSION='${{ inputs.maven_version }}'
+        JASYPT='${{ inputs.jasypt_encryptor_password }}'
+        SRV_BASE_PATH='${{ inputs.srv_base_path }}'
+        TAG_NAME='${{ inputs.tag_name }}'
+        CONF_DIR='${{ inputs.conf_path }}'
+        CONF_FILE='${{ inputs.conf_file }}'
+        SRV_DEPLOY_CMD='${{ inputs.srv_deploy_cmd }}'
+
         ssh -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=20 \
-          "${{ inputs.ssh_user }}@${{ inputs.server_ip }}" 'bash -lc "
-            echo Connected to \$(hostname)
+          "$SSH_USER@$SERVER_IP" 'bash -s --' \
+          "$JAVA_VERSION" "$MAVEN_VERSION" "$JASYPT" "$SRV_BASE_PATH" "$TAG_NAME" "$CONF_DIR" "$CONF_FILE" "$SRV_DEPLOY_CMD" <<'REMOTE'
 
-            export SDKMAN_DIR=\$HOME/.sdkman
-            [ -s \"\$SDKMAN_DIR/bin/sdkman-init.sh\" ] && . \"\$SDKMAN_DIR/bin/sdkman-init.sh\"
+        JAVA_VERSION="$1"
+        MAVEN_VERSION="$2"
+        JASYPT="$3"
+        SRV_BASE_PATH="$4"
+        TAG_NAME="$5"
+        CONF_DIR="${6:-}"
+        CONF_FILE="${7:-}"
+        SRV_DEPLOY_CMD="$8"
 
-            export JAVA_HOME=\$(sdk home java 21.0.4-oracle)
-            export M2_HOME=\$(sdk home maven 3.9.9)
-            export PATH=\$JAVA_HOME/bin:\$M2_HOME/bin:\$PATH
-            export JASYPT_ENCRYPTOR_PASSWORD=\"${{ inputs.jasypt_encryptor_password }}\"
+        echo "Connected to $(hostname)"
 
-            export NVM_DIR=\$HOME/.nvm
-            [ -s \"\$NVM_DIR/nvm.sh\" ] && . \"\$NVM_DIR/nvm.sh\"
+        export SDKMAN_DIR="$HOME/.sdkman"
+        [ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ] && . "$SDKMAN_DIR/bin/sdkman-init.sh"
+        export JAVA_HOME="$(sdk home java "$JAVA_VERSION")"
+        export M2_HOME="$(sdk home maven "$MAVEN_VERSION")"
+        export PATH="$JAVA_HOME/bin:$M2_HOME/bin:$PATH"
+        export JASYPT_ENCRYPTOR_PASSWORD="$JASYPT"
 
-            cd \"${{ inputs.srv_base_path }}\" || exit 10
-            ${{ inputs.srv_deploy_cmd }} || exit 20
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-            echo Deployment commands executed successfully.
-          "'
+        cd "$SRV_BASE_PATH" || exit 10
+
+        if [ -n "$TAG_NAME" ]; then
+          echo "Tag fourni: $TAG_NAME — mise à jour de la conf"
+          if [ -n "$CONF_FILE" ]; then
+            CONF_PATH="$CONF_FILE"
+            [ -n "$CONF_DIR" ] && CONF_PATH="$CONF_DIR/$CONF_FILE"
+            if [ -f "$CONF_PATH" ]; then
+              esc_tag=$(printf '%s\n' "$TAG_NAME" | sed 's/[\/&]/\\&/g')
+              keys=(
+                'services/avenirs-portfolio/avenirs-cofolio-client'
+                'services/avenirs-portfolio/avenirs-portfolio-api'
+              )
+              for k in "${keys[@]}"; do
+                sed -i -E "s|^([[:space:]]*)${k}([[:space:]]*)=([[:space:]]*).*$|\1${k} = ${esc_tag}|" "$CONF_PATH"
+              done
+              echo "✔ Conf mise à jour :"
+              grep -E "^( *services/avenirs-portfolio/(avenirs-cofolio-client|avenirs-portfolio-api))" "$CONF_PATH" || true
+            else
+              echo "Fichier de conf introuvable: $CONF_PATH" >&2
+            fi
+          fi
+        fi
+
+        echo "Deployment commands executed successfully."
+        REMOTE
       shell: bash
 
     - name: 🧹 Teardown VPN (always)

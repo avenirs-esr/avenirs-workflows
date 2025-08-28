@@ -7,6 +7,11 @@ on:
         description: "Target environment for deployment (dev, qualif, recette)"
         type: string
         default: dev
+      tag_name:
+        required: false
+        description: "Tag name for the deployment (if needed)"
+        type: string
+        default: ""
 
 
 jobs:
@@ -33,3 +38,8 @@ jobs:
           srv_base_path: ${{ secrets.SRV_BASE_PATH }}
           srv_deploy_cmd: ${{ secrets.SRV_DEPLOY_CMD }}
           jasypt_encryptor_password: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
+          java_version: ${{ vars.JAVA_VERSION }}
+          maven_version: ${{ vars.MAVEN_VERSION }}
+          conf_path: ${{ vars.CONF_PATH }}
+          conf_file: ${{ vars.CONF_FILE }}
+          tag_name: ${{ inputs.tag_name }}
