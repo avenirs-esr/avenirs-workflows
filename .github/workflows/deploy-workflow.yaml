@@ -16,7 +16,9 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on:
+      group: Default
+      labels: [ self-hosted, srv-dev ]
     permissions:
       contents: read
     env:
