@@ -49,89 +49,45 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: 🛠️ Install OpenVPN & tools
+    - name: 🛠️ Update config (optional tag)
       run: |
-        sudo apt-get update
-        sudo apt-get install -y openvpn net-tools iproute2
-      shell: bash
-
-    - name: 📜 Write OpenVPN config from secret
-      run: |
-        echo "${{ inputs.openvpn_conf_b64 }}" | base64 -d > client.ovpn
-        echo "auth-nocache" >> client.ovpn
-        chmod 600 client.ovpn
-      shell: bash
-
-    - name: 👮‍♂️ Start OpenVPN (daemon) and wait for tun0
-      run: |
-        if [ -n "${{ inputs.openvpn_user || '' }}" ] && [ -n "${{ inputs.openvpn_pass || '' }}" ]; then
-          printf "%s\n%s\n" "${{ inputs.openvpn_user }}" "${{ inputs.openvpn_pass }}" > auth.txt
-          chmod 600 auth.txt
-          if grep -qE '^\s*auth-user-pass(\s+\S+)?\s*$' client.ovpn; then
-            sed -i 's/^\s*auth-user-pass\s*$/auth-user-pass auth.txt/' client.ovpn
-          else
-            echo "auth-user-pass auth.txt" >> client.ovpn
-          fi
-        fi
-
-        sudo openvpn --config client.ovpn --daemon --writepid /tmp/openvpn.pid --log /tmp/openvpn.log
-        echo "Waiting for VPN connection (tun0)..."
-        for i in {1..30}; do
-          if ip addr show tun0 >/dev/null 2>&1; then
-            echo "VPN connected (tun0 is up)."
-            ip addr show tun0
-            break
-          fi
-          echo "Waiting for tun0... ($i/30)"
-          sleep 2
-        done
-        if ! ip addr show tun0 >/dev/null 2>&1; then
-          echo "::error::VPN connection failed (tun0 not found)"
-          echo "Last OpenVPN log lines:"
-          sudo tail -n 20 /tmp/openvpn.log || true
-          exit 1
-        fi
-        echo "VPN connection established."
-      shell: bash
-
-    - name: 🔑 Add SSH key
-      uses: webfactory/ssh-agent@v0.9.0
-      with:
-        ssh-private-key: ${{ inputs.ssh_key }}
-
-    - name: 🛡️ Trust target host key
-      run: |
-        mkdir -p ~/.ssh
-        ssh-keyscan -H "${{ inputs.server_ip }}" >> ~/.ssh/known_hosts
-      shell: bash
-
-    - name: 🚀 Run deploy commands on server
-      run: |
-        SSH_USER='${{ inputs.ssh_user }}'
-        SERVER_IP='${{ inputs.server_ip }}'
-        JAVA_VERSION='${{ inputs.java_version }}'
-        MAVEN_VERSION='${{ inputs.maven_version }}'
-        JASYPT='${{ inputs.jasypt_encryptor_password }}'
-        SRV_BASE_PATH='${{ inputs.srv_base_path }}'
         TAG_NAME='${{ inputs.tag_name }}'
         CONF_DIR='${{ inputs.conf_path }}'
         CONF_FILE='${{ inputs.conf_file }}'
+        SRV_BASE_PATH='${{ inputs.srv_base_path }}'
+
+        [ -n "$TAG_NAME" ] || exit 0
+
+        cd "$SRV_BASE_PATH"
+        if [ -n "$CONF_FILE" ]; then
+          CONF_PATH="$CONF_FILE"
+          [ -n "$CONF_DIR" ] && CONF_PATH="$CONF_DIR/$CONF_FILE"
+          if [ -f "$CONF_PATH" ]; then
+           esc_tag=$(printf '%s\n' "$TAG_NAME" | sed 's/[\/&]/\\&/g')
+           keys=(
+             'services/avenirs-portfolio/avenirs-cofolio-client'
+             'services/avenirs-portfolio/avenirs-portfolio-api'
+           )
+           for k in "${keys[@]}"; do
+             sed -i -E "s|^([[:space:]]*)${k}([[:space:]]*)=([[:space:]]*).*$|\1${k} = ${esc_tag}|" "$CONF_PATH"
+           done
+           echo "✔ Conf mise à jour :"
+           for k in "${keys[@]}"; do
+             grep -E "^ *${k} *=" "$CONF_PATH" || true
+           done
+          else
+           echo "::warning::Fichier de conf introuvable: $CONF_PATH"
+          fi
+        fi
+      shell: bash
+
+    - name: 🚀 Run local deploy command
+      run: |
+        SRV_BASE_PATH='${{ inputs.srv_base_path }}'
         SRV_DEPLOY_CMD='${{ inputs.srv_deploy_cmd }}'
-
-        ssh -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=20 \
-          "$SSH_USER@$SERVER_IP" 'bash -s --' \
-          "$JAVA_VERSION" "$MAVEN_VERSION" "$JASYPT" "$SRV_BASE_PATH" "$TAG_NAME" "$CONF_DIR" "$CONF_FILE" "$SRV_DEPLOY_CMD" <<'REMOTE'
-
-        JAVA_VERSION="$1"
-        MAVEN_VERSION="$2"
-        JASYPT="$3"
-        SRV_BASE_PATH="$4"
-        TAG_NAME="$5"
-        CONF_DIR="${6:-}"
-        CONF_FILE="${7:-}"
-        SRV_DEPLOY_CMD="$8"
-
-        echo "Connected to $(hostname)"
+        JAVA_VERSION='${{ inputs.java_version }}'
+        MAVEN_VERSION='${{ inputs.maven_version }}'
+        JASYPT='${{ inputs.jasypt_encryptor_password }}'
 
         export SDKMAN_DIR="$HOME/.sdkman"
         [ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ] && . "$SDKMAN_DIR/bin/sdkman-init.sh"
@@ -143,49 +99,10 @@ runs:
         export NVM_DIR="$HOME/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-        cd "$SRV_BASE_PATH" || exit 10
+        cd "$SRV_BASE_PATH" || { echo "::error::Base path not found"; exit 10; }
 
-        if [ -n "$TAG_NAME" ]; then
-          echo "Tag fourni: $TAG_NAME — mise à jour de la conf"
-          if [ -n "$CONF_FILE" ]; then
-            CONF_PATH="$CONF_FILE"
-            [ -n "$CONF_DIR" ] && CONF_PATH="$CONF_DIR/$CONF_FILE"
-            if [ -f "$CONF_PATH" ]; then
-              esc_tag=$(printf '%s\n' "$TAG_NAME" | sed 's/[\/&]/\\&/g')
-              keys=(
-                'services/avenirs-portfolio/avenirs-cofolio-client'
-                'services/avenirs-portfolio/avenirs-portfolio-api'
-              )
-              for k in "${keys[@]}"; do
-                k="$(echo "$k" | xargs)"
-                [ -n "$k" ] || continue
-                sed -i -E "s|^([[:space:]]*)${k}([[:space:]]*)=([[:space:]]*).*$|\1${k} = ${esc_tag}|" "$CONF_PATH"
-              done
-              echo "✔ Conf mise à jour :"
-              for k in "${keys[@]}"; do
-                k="$(echo "$k" | xargs)"; [ -n "$k" ] || continue
-                grep -E "^ *${k} *=" "$CONF_PATH" || true
-              done
-            else
-              echo "Fichier de conf introuvable: $CONF_PATH" >&2
-            fi
-          fi
-        fi
+        echo "Running: $SRV_DEPLOY_CMD"
+        "$SRV_DEPLOY_CMD"
 
-        "$SRV_DEPLOY_CMD" || exit 20
-
-        echo "Deployment commands executed successfully."
-        REMOTE
-      shell: bash
-
-    - name: 🧹 Teardown VPN (always)
-      if: always()
-      run: |
-        if [ -f /tmp/openvpn.pid ]; then
-          sudo kill "$(cat /tmp/openvpn.pid)" || true
-          sleep 2
-        fi
-        sudo pkill -f "openvpn --config" || true
-        echo "Last OpenVPN log lines (for diagnostics):"
-        sudo tail -n 80 /tmp/openvpn.log || true
+        echo "✅ Deployment finished."
       shell: bash
