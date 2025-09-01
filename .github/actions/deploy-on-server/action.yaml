@@ -2,24 +2,6 @@ name: "Deploy on Server"
 description: "Deploy application on a remote server using SSH"
 
 inputs:
-  server_ip:
-    description: "IP address of the remote server"
-    required: true
-  openvpn_conf_b64:
-    description: "Base64-encoded .ovpn client file"
-    required: true
-  openvpn_user:
-    description: "OpenVPN username"
-    required: true
-  openvpn_pass:
-    description: "OpenVPN password"
-    required: true
-  ssh_key:
-    description: "SSH private key"
-    required: true
-  ssh_user:
-    description: "SSH user"
-    required: true
   srv_base_path:
     description: "Base path on the server where the application is located"
     required: true
