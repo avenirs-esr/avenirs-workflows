@@ -2,11 +2,6 @@ name: Deploy on remote server
 on:
   workflow_call:
     inputs:
-      target_env:
-        required: true
-        description: "Target environment for deployment (dev, qualif, recette)"
-        type: string
-        default: dev
       tag_name:
         required: false
         description: "Tag name for the deployment (if needed)"
@@ -15,12 +10,37 @@ on:
 
 
 jobs:
+  select-server:
+    runs-on: ubuntu-latest
+    outputs:
+      target_env: ${{ steps.default-env.outputs.target_env || steps.set-env.outputs.target_env }}
+    permissions:
+      contents: read
+
+    steps:
+      - id: default-env
+        name: 🧩 Default env (no tag) -> srv-dev
+        if: ${{ inputs.tag_name == '' }}
+        shell: bash
+        run: echo "target_env=srv-dev" >> "$GITHUB_OUTPUT"
+
+      - id: set-env
+        name: 🛠️ Set target environment
+        if: ${{ inputs.tag_name != '' }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/verify-prerelease-and-tags@main
+        with:
+          tag_name: ${{ inputs.tag_name }}
+          repos: |
+            avenirs-esr/avenirs-cofolio-client
+            avenirs-esr/avenirs-portfolio-api
+
   deploy:
+    needs: select-server
     runs-on:
       group: Default
       labels:
         - self-hosted
-        - ${{ (inputs.target_env == 'recette' && 'srv-recette') || (inputs.target_env == 'qualif' && 'srv-qualif') || 'srv-dev' }}
+        - ${{ needs.select-server.outputs.target_env }}
     permissions:
       contents: read
 

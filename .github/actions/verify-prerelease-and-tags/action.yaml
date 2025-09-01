@@ -1,0 +1,93 @@
+name: Verify prerelease & tags
+description: "Ensure tag is a prerelease (qa/rc), check tag exists across repos, and output env/labels."
+inputs:
+  tag_name:
+    description: "Tag to validate (falls back to github.ref_name if empty)"
+    required: false
+    default: ""
+  repos:
+    description: "Newline-separated list of owner/repo to check for the tag"
+    required: true
+  qa_suffix:
+    description: "Suffix that indicates QA"
+    required: false
+    default: "-qa"
+  rc_suffix:
+    description: "Suffix that indicates RC"
+    required: false
+    default: "-rc"
+
+outputs:
+  target_env:
+    value: ${{ steps.detect.outputs.target_env }}
+    description: "Stage allows us to find out which environment we should deploy to. (qa / rc) "
+
+runs:
+  using: "composite"
+  steps:
+    - id: detect
+      name: 🔎 Detect release type (qa/rc)
+      shell: bash
+      env:
+        IN_TAG:     ${{ inputs.tag_name }}
+        QA_SFX:     ${{ inputs.qa_suffix }}
+        RC_SFX:     ${{ inputs.rc_suffix }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "$IN_TAG" ]; then
+          echo "::error::No tag_name provided and not running on a tag; cannot verify prerelease."
+          exit 1
+        fi
+
+        if [ "${{ github.event_name }}" = "release" ]; then
+          if [ "${{ github.event.release.prerelease }}" = "true" ]; then
+            echo "✔ prerelease via event"
+          else
+            echo "::error::This release is NOT marked as pre-release."
+            exit 1
+          fi
+        fi
+
+        if [[ "$IN_TAG" == *"$QA_SFX"* ]]; then
+          echo "Stage: QA"
+          TARGET_ENV=srv-qualif
+        elif [[ "$IN_TAG" == *"$RC_SFX"* ]]; then
+          echo "Stage: RC"
+          TARGET_ENV=srv-recette
+        else
+          echo "::error::The tag should be contains '$QA_SFX' (QA) or '$RC_SFX' (RC). Receive: $IN_TAG"
+          exit 1
+        fi
+
+        echo "target_env=$TARGET_ENV" >> "$GITHUB_OUTPUT"
+
+    - name: ✅ Check if tags exists in all repositories
+      shell: bash
+      env:
+        TAG_NAME: ${{ inputs.tag_name }}
+        REPO_LIST: ${{ inputs.repos }}
+      run: |
+        set -euo pipefail
+        missing=()
+
+        export GIT_TERMINAL_PROMPT=0
+
+        while IFS= read -r repo; do
+          [ -z "${repo:-}" ] && continue
+          echo "🔎 Checking $repo for tag '$TAG_NAME'..."
+
+          if git ls-remote --tags --exit-code "https://github.com/${repo}.git" "refs/tags/${TAG_NAME}" >/dev/null 2>&1
+          then
+            echo "✔ $repo has tag $TAG_NAME"
+          else
+            echo "::warning::$repo is missing tag $TAG_NAME"
+            missing+=("$repo")
+          fi
+        done <<< "$REPO_LIST"
+
+        if [ ${#missing[@]} -gt 0 ]; then
+          echo "missing=${missing[*]}" >> "$GITHUB_OUTPUT"
+          echo "::error::Missing tag '$TAG_NAME' in: ${missing[*]}"
+          exit 1
+        fi
