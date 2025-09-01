@@ -18,7 +18,9 @@ jobs:
   deploy:
     runs-on:
       group: Default
-      labels: [ self-hosted, srv-dev ]
+      labels:
+        - self-hosted
+        - ${{ (inputs.target_env == 'recette' && 'srv-recette') || (inputs.target_env == 'qualif' && 'srv-qualif') || 'srv-dev' }}
     permissions:
       contents: read
     env:
