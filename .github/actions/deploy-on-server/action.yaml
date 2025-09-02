@@ -3,70 +3,87 @@ description: "Deploy application on a remote server using SSH"
 
 inputs:
   srv_base_path:
+    required: true
     description: "Base path on the server where the application is located"
-    required: true
   srv_deploy_cmd:
+    required: true
     description: "Command to deploy the application on the server (e.g., ./deploy.sh)"
+  srv_update_deployment_cmd:
     required: true
+    description: "Command to update deployment (e.g., ./update-deployment.sh)"
   jasypt_encryptor_password:
+    required: true
     description: "Password for Jasypt encryption"
-    required: true
   java_version:
-    description: "Java version to use on the server (e.g., 21.0.4-oracle)"
     required: true
+    description: "Java version (e.g., 21.0.4-oracle)"
   maven_version:
-    description: "Maven version to use on the server (e.g., 3.9.9)"
     required: true
+    description: "Maven version (e.g., 3.9.9)"
   conf_path:
-    description: "Path to the configuration file on the server (if needed)"
     required: false
+    description: "Configuration file path (directory) on the server"
   conf_file:
-    description: "Configuration file name (if needed)"
     required: false
+    description: "Configuration file name"
   tag_name:
-    description: "Tag name for the deployment (if needed)"
     required: false
     default: ""
+    description: "Fallback tag if resolved_pairs is empty"
+  resolved_pairs:
+    required: false
+    default: ""
+    description: "Multiline repo=tag list (e.g. 'avenirs-portfolio-api=v1.0.0-qa\navenirs-cofolio-client=v1.0.1-qa')"
 
 runs:
   using: "composite"
   steps:
-    - name: 🛠️ Update config (optional tag)
+    - name: 🛠️ Update config
+      if: ${{ inputs.tag_name != '' || inputs.resolved_pairs != '' }}
+      shell: bash
       run: |
-        TAG_NAME='${{ inputs.tag_name }}'
         CONF_DIR='${{ inputs.conf_path }}'
         CONF_FILE='${{ inputs.conf_file }}'
         SRV_BASE_PATH='${{ inputs.srv_base_path }}'
+        TAG_NAME='${{ inputs.tag_name }}'
 
-        [ -n "$TAG_NAME" ] || exit 0
+        cd "$SRV_BASE_PATH" || exit 10
+        [ -n "$CONF_FILE" ] || exit 0
+        CONF_PATH="$CONF_FILE"
+        [ -n "$CONF_DIR" ] && CONF_PATH="$CONF_DIR/$CONF_FILE"
+        [ -f "$CONF_PATH" ] || { echo "::warning::Config not found: $CONF_PATH"; exit 0; }
 
-        cd "$SRV_BASE_PATH"
-        if [ -n "$CONF_FILE" ]; then
-          CONF_PATH="$CONF_FILE"
-          [ -n "$CONF_DIR" ] && CONF_PATH="$CONF_DIR/$CONF_FILE"
-          if [ -f "$CONF_PATH" ]; then
-           esc_tag=$(printf '%s\n' "$TAG_NAME" | sed 's/[\/&]/\\&/g')
-           keys=(
-             'services/avenirs-portfolio/avenirs-cofolio-client'
-             'services/avenirs-portfolio/avenirs-portfolio-api'
-           )
-           for k in "${keys[@]}"; do
-             sed -i -E "s|^([[:space:]]*)${k}([[:space:]]*)=([[:space:]]*).*$|\1${k} = ${esc_tag}|" "$CONF_PATH"
-           done
-           echo "✔ Conf mise à jour :"
-           for k in "${keys[@]}"; do
-             grep -E "^ *${k} *=" "$CONF_PATH" || true
-           done
-          else
-           echo "::warning::Fichier de conf introuvable: $CONF_PATH"
-          fi
+        PAIRS_STR="$(printf %s "${{ inputs.resolved_pairs }}")"
+        if [ -n "$PAIRS_STR" ]; then
+          while IFS='=' read -r repo tag; do
+            [ -z "${repo:-}" ] && continue
+            [ -z "${tag:-}" ] && continue
+            esc_tag=$(printf '%s\n' "$tag" | sed 's/[\/&]/\\&/g')
+            key="services/avenirs-portfolio/${repo}"
+            sed -i -E "s|^([[:space:]]*)${key}([[:space:]]*)=([[:space:]]*).*$|\1${key} = ${esc_tag}|" "$CONF_PATH"
+            grep -E "^ *${key} *=" "$CONF_PATH" || true
+          done <<'EOF'
+              ${{ inputs.resolved_pairs }}
+          EOF
+        elif [ -n "$TAG_NAME" ]; then
+          esc_tag=$(printf '%s\n' "$TAG_NAME" | sed 's/[\/&]/\\&/g')
+          keys=(
+            'services/avenirs-portfolio/avenirs-cofolio-client'
+            'services/avenirs-portfolio/avenirs-portfolio-api'
+          )
+          for k in "${keys[@]}"; do
+            sed -i -E "s|^([[:space:]]*)${k}([[:space:]]*)=([[:space:]]*).*$|\1${k} = ${esc_tag}|" "$CONF_PATH"
+            grep -E "^ *${k} *=" "$CONF_PATH" || true
+          done
         fi
-      shell: bash
+
 
     - name: 🚀 Run local deploy command
+      shell: bash
       run: |
         SRV_BASE_PATH='${{ inputs.srv_base_path }}'
         SRV_DEPLOY_CMD='${{ inputs.srv_deploy_cmd }}'
+        SRV_UPDATE_DEPLOYMENT_CMD='${{ inputs.srv_update_deployment_cmd }}'
         JAVA_VERSION='${{ inputs.java_version }}'
         MAVEN_VERSION='${{ inputs.maven_version }}'
         JASYPT='${{ inputs.jasypt_encryptor_password }}'
@@ -82,9 +99,6 @@ runs:
         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
         cd "$SRV_BASE_PATH" || { echo "::error::Base path not found"; exit 10; }
-
-        echo "Running: $SRV_DEPLOY_CMD"
-        "$SRV_DEPLOY_CMD"
-
+        "$SRV_UPDATE_DEPLOYMENT_CMD" || { echo "::error::Update deployment command failed"; exit 20; }
+        "$SRV_DEPLOY_CMD" || { echo "::error::Deploy command failed"; exit 30; }
         echo "✅ Deployment finished."
-      shell: bash
