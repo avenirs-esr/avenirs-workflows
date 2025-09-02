@@ -4,16 +4,15 @@ on:
     inputs:
       tag_name:
         required: false
-        description: "Tag name for the deployment (if needed)"
         type: string
         default: ""
-
 
 jobs:
   select-server:
     runs-on: ubuntu-latest
     outputs:
-      target_env: ${{ steps.default-env.outputs.target_env || steps.set-env.outputs.target_env }}
+      target_env:   ${{ steps.default-env.outputs.target_env || steps.set-env.outputs.target_env }}
+      resolved_tags: ${{ steps.set-env.outputs.resolved_tags }}
     permissions:
       contents: read
 
@@ -25,14 +24,19 @@ jobs:
         run: echo "target_env=srv-dev" >> "$GITHUB_OUTPUT"
 
       - id: set-env
-        name: 🛠️ Set target environment
+        name: 🛠️ Set env & verify tags (from config)
         if: ${{ inputs.tag_name != '' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/verify-prerelease-and-tags@main
         with:
-          tag_name: ${{ inputs.tag_name }}
+          tag_name:        ${{ inputs.tag_name }}
           repos: |
             avenirs-esr/avenirs-cofolio-client
             avenirs-esr/avenirs-portfolio-api
+          app_id:          ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          config_repo:     ${{ secrets.GH_CONFIG_REPO }}
+          config_ref:      ${{ vars.GH_CONFIG_REF }}
+          config_path:     ${{ secrets.GH_CONFIG_PATH }}
 
   deploy:
     needs: select-server
@@ -53,9 +57,11 @@ jobs:
         with:
           srv_base_path: ${{ secrets.SRV_BASE_PATH }}
           srv_deploy_cmd: ${{ secrets.SRV_DEPLOY_CMD }}
+          srv_update_deployment_cmd: ${{ secrets.SRV_UPDATE_DEPLOYMENT_CMD }}
           jasypt_encryptor_password: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
           java_version: ${{ vars.JAVA_VERSION }}
           maven_version: ${{ vars.MAVEN_VERSION }}
           conf_path: ${{ vars.CONF_PATH }}
           conf_file: ${{ vars.CONF_FILE }}
+          resolve_tags: ${{ needs.select-server.outputs.resolved_pairs }}
           tag_name: ${{ inputs.tag_name }}

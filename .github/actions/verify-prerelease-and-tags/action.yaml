@@ -1,12 +1,13 @@
 name: Verify prerelease & tags
-description: "Ensure tag is a prerelease (qa/rc), check tag exists across repos, and output env/labels."
+description: "Ensure tag is a prerelease (qa/rc), load env tags from private config via GitHub App, verify per-repo, and expose mapping."
+
 inputs:
   tag_name:
     description: "Tag to validate (falls back to github.ref_name if empty)"
     required: false
     default: ""
   repos:
-    description: "Newline-separated list of owner/repo to check for the tag"
+    description: "Newline-separated list of owner/repo to check (e.g., avenirs-esr/avenirs-portfolio-api)"
     required: true
   qa_suffix:
     description: "Suffix that indicates QA"
@@ -16,11 +17,32 @@ inputs:
     description: "Suffix that indicates RC"
     required: false
     default: "-rc"
+  app_id:
+    description: "GitHub App ID (numeric)"
+    required: true
+  app_private_key:
+    description: "GitHub App private key (PEM)"
+    required: true
+  config_repo:
+    description: "owner/repo containing tags.conf"
+    required: false
+    default: "avenirs-esr/avenirs-deployment"
+  config_ref:
+    description: "branch/ref of config repo"
+    required: false
+    default: "main"
+  config_path:
+    description: "path to tags.conf inside the repo"
+    required: false
+    default: "tags.conf"
 
 outputs:
   target_env:
     value: ${{ steps.detect.outputs.target_env }}
-    description: "Stage allows us to find out which environment we should deploy to. (qa / rc) "
+    description: "Runner label to target (srv-qualif | srv-recette)"
+  resolved_pairs:
+    value: ${{ steps.build-map.outputs.resolved_pairs }}
+    description: "JSON object { repoName: tagFromConfig }"
 
 runs:
   using: "composite"
@@ -29,65 +51,140 @@ runs:
       name: 🔎 Detect release type (qa/rc)
       shell: bash
       env:
-        IN_TAG:     ${{ inputs.tag_name }}
-        QA_SFX:     ${{ inputs.qa_suffix }}
-        RC_SFX:     ${{ inputs.rc_suffix }}
+        IN_TAG: ${{ inputs.tag_name }}
+        QA_SFX: ${{ inputs.qa_suffix }}
+        RC_SFX: ${{ inputs.rc_suffix }}
       run: |
         set -euo pipefail
 
         if [ -z "$IN_TAG" ]; then
-          echo "::error::No tag_name provided and not running on a tag; cannot verify prerelease."
+          echo "::error::No tag_name provided; cannot verify prerelease."
           exit 1
         fi
 
         if [ "${{ github.event_name }}" = "release" ]; then
-          if [ "${{ github.event.release.prerelease }}" = "true" ]; then
-            echo "✔ prerelease via event"
-          else
+          if [ "${{ github.event.release.prerelease }}" != "true" ]; then
             echo "::error::This release is NOT marked as pre-release."
             exit 1
           fi
         fi
 
         if [[ "$IN_TAG" == *"$QA_SFX"* ]]; then
-          echo "Stage: QA"
+          ENV_KEY=qualif
           TARGET_ENV=srv-qualif
         elif [[ "$IN_TAG" == *"$RC_SFX"* ]]; then
-          echo "Stage: RC"
+          ENV_KEY=recette
           TARGET_ENV=srv-recette
         else
-          echo "::error::The tag should be contains '$QA_SFX' (QA) or '$RC_SFX' (RC). Receive: $IN_TAG"
+          echo "::error::Tag must contain '$QA_SFX' (QA) or '$RC_SFX' (RC). Got: $IN_TAG"
           exit 1
         fi
 
+        echo "Using env key: $ENV_KEY (target: $TARGET_ENV)"
+        echo "ENV_KEY=$ENV_KEY" >> "$GITHUB_ENV"
         echo "target_env=$TARGET_ENV" >> "$GITHUB_OUTPUT"
 
-    - name: ✅ Check if tags exists in all repositories
+    - id: app-token
+      name: 🔐 GitHub App token
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ inputs.app_id }}
+        private-key: ${{ inputs.app_private_key }}
+        owner: ${{ github.repository_owner }}
+
+    - name: 📥 Checkout config repo
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.config_repo }}
+        ref: ${{ inputs.config_ref }}
+        token: ${{ steps.app-token.outputs.token }}
+        path: __cfg__
+
+    - id: build-map
+      name: 🧩 Build repo→tag map from config
       shell: bash
       env:
-        TAG_NAME: ${{ inputs.tag_name }}
-        REPO_LIST: ${{ inputs.repos }}
+        CFG_PATH: ${{ inputs.config_path }}
       run: |
         set -euo pipefail
+        CFG="__cfg__/${CFG_PATH}"
+        [ -f "$CFG" ] || { echo "::error::Config not found: $CFG"; exit 1; }
+
+        awk -v env="$ENV_KEY" -F'=' '
+          BEGIN { OFS="=" }
+          /^[[:space:]]*#/ { next }
+          /^[[:space:]]*$/ { next }
+          {
+            key=$1; val=$2
+            sub(/^[ \t]+|[ \t]+$/, "", key)
+            sub(/^[ \t]+|[ \t]+$/, "", val)
+            if (index(key, env".") == 1) {
+              sub("^"env"\\.", "", key)
+              print key"="val
+            }
+          }
+        ' "$CFG" > env_tags.list
+
+        echo "Resolved tags for '$ENV_KEY':"
+        cat env_tags.list || true
+
+        json="{"
+        sep=""
+        while IFS='=' read -r repo tag; do
+          [ -z "${repo:-}" ] && continue
+          repo=$(echo "$repo" | tr -d '[:space:]')
+          tag=$(echo "$tag" | tr -d '[:space:]')
+          json="${json}${sep}\"${repo}\":\"${tag}\""
+          sep=","
+        done < env_tags.list
+        json="${json}}"
+
+        {
+          echo "resolved_pairs<<EOF"
+          cat env_tags.list
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+        echo "ENV_TAGS_FILE=$PWD/env_tags.list" >> "$GITHUB_ENV"
+
+    - name: ✅ Verify repo tags exist (from config)
+      shell: bash
+      env:
+        REPO_LIST: ${{ inputs.repos }}
+        TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
+        set -euo pipefail
+        export GIT_TERMINAL_PROMPT=0
+        [ -s "$ENV_TAGS_FILE" ] || { echo "::error::No tags for env '$ENV_KEY' in config."; exit 1; }
+
         missing=()
 
-        export GIT_TERMINAL_PROMPT=0
+        get_tag() {
+          local short="$1"
+          awk -F'=' -v r="$short" '$1==r {print $2}' "$ENV_TAGS_FILE" | tr -d '[:space:]'
+        }
 
         while IFS= read -r repo; do
           [ -z "${repo:-}" ] && continue
-          echo "🔎 Checking $repo for tag '$TAG_NAME'..."
+          if [[ "$repo" != */* ]]; then full="${GITHUB_REPOSITORY_OWNER}/${repo}"; short="$repo"; else full="$repo"; short="${repo##*/}"; fi
 
-          if git ls-remote --tags --exit-code "https://github.com/${repo}.git" "refs/tags/${TAG_NAME}" >/dev/null 2>&1
-          then
-            echo "✔ $repo has tag $TAG_NAME"
+          tag="$(get_tag "$short")"
+          if [ -z "$tag" ]; then
+            echo "::error::No tag configured for '${ENV_KEY}.${short}' in tags.conf"
+            missing+=("$full(no-config)")
+            continue
+          fi
+
+          url="https://github.com/${full}.git"
+          echo "🔎 $full → tag-from-config='$tag'"
+          if git ls-remote --tags --exit-code "$url" "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "✔ $full has tag '$tag'"
           else
-            echo "::warning::$repo is missing tag $TAG_NAME"
-            missing+=("$repo")
+            echo "::warning::$full is missing tag '$tag'"
+            missing+=("$full")
           fi
         done <<< "$REPO_LIST"
 
         if [ ${#missing[@]} -gt 0 ]; then
-          echo "missing=${missing[*]}" >> "$GITHUB_OUTPUT"
-          echo "::error::Missing tag '$TAG_NAME' in: ${missing[*]}"
+          echo "::error::Missing config tag(s) in: ${missing[*]}"
           exit 1
         fi
