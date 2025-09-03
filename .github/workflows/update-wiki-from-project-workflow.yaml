@@ -46,13 +46,13 @@ jobs:
           epic_label:     ${{ inputs.epic_label }}
           out_file:       US_TABLE.md
 
-      - name: 📥 Clone wiki of caller repo
-        env:
-          TOKEN: ${{ steps.app.outputs.app-token }}
-        run: |
-          git config --global user.name  "${{ steps.app.outputs.app-slug || 'avenirs-wiki-bot' }}[bot]"
-          git config --global user.email "${{ steps.app.outputs.app-slug || 'avenirs-wiki-bot' }}[bot]@users.noreply.github.com"
-          git clone "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki
+      - name: 📥 Clone wiki
+        uses: avenirs-esr/avenirs-workflows/.github/actions/wiki-update@main
+        with:
+          mode: clone-only
+          token: ${{ steps.app.outputs.app-token }}
+          app_slug: ${{ steps.app.outputs.app-slug || 'avenirs-wiki-bot' }}
+          wiki_page: ${{ inputs.wiki_page }}
 
       - name: 🔄️ Replace section in page
         uses: avenirs-esr/avenirs-workflows/.github/actions/wiki-replace-section@main
@@ -63,8 +63,8 @@ jobs:
           create_missing_section: "true"
 
       - name: 📤 Commit & push
-        working-directory: wiki
-        run: |
-          git add "${{ inputs.wiki_page }}"
-                git commit -m "chore(wiki): update US table" || echo "No changes"
-                git push
+        uses: avenirs-esr/avenirs-workflows/.github/actions/wiki-update@main
+        with:
+          mode: commit-only
+          wiki_page: ${{ inputs.wiki_page }}
+          commit_message: "chore(wiki): update US table"
