@@ -1,0 +1,163 @@
+name: "Project to Markdown"
+description: "Extract User Stories from a GitHub Project to a Markdown table"
+inputs:
+  token:
+    required: true
+    description: "GitHub App installation token"
+  org:
+    required: true
+    description: "Organization name"
+  project_number:
+    required: true
+    description: "Project number (not ID)"
+  profil_label:
+    required: true
+    description: "Profil label to filter User Stories. Ex: 'Profil: Apprenant'"
+  epic_label:
+    required: true
+    description: "Epic label to identify epics. Ex: 'Type: Epic'"
+  out_file:
+    required: true
+    description: "Output Markdown file path"
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Generate Markdown table from Project
+      shell: bash
+      env:
+        TOKEN:          ${{ inputs.token }}
+        ORG:            ${{ inputs.org }}
+        PROJECT_NUMBER: ${{ inputs.project_number }}
+        PROFIL_LABEL:   ${{ inputs.profil_label }}
+        EPIC_LABEL:     ${{ inputs.epic_label }}
+        OUT_FILE:       ${{ inputs.out_file }}
+      run: |
+        node - <<'NODE'
+        const fs = require('fs');
+
+        const token   = process.env.TOKEN;
+        const org     = process.env.ORG;
+        const number  = parseInt(process.env.PROJECT_NUMBER,10);
+        const profilLabel = process.env.PROFIL_LABEL;
+        const epicLabel   = process.env.EPIC_LABEL;
+        const outFile     = process.env.OUT_FILE;
+
+        const query = `
+        query($org:String!, $number:Int!, $after:String){
+          organization(login:$org){
+            projectV2(number:$number){
+              items(first:100, after:$after){
+                nodes{
+                  content{
+                    __typename
+                    ... on Issue {
+                      number
+                      title
+                      url
+                      updatedAt
+                      labels(first:50){ nodes{ name } }
+                      trackedInIssues(first:10){ nodes{
+                        number
+                        title
+                        labels(first:20){ nodes{ name } }
+                      }}
+                    }
+                  }
+                  fieldValues(first:5){ nodes{
+                    __typename
+                    ... on ProjectV2ItemFieldSingleSelectValue {
+                      field { ... on ProjectV2SingleSelectField { name } }
+                      name
+                    }
+                  }}
+                }
+                pageInfo{ hasNextPage endCursor }
+              }
+            }
+          }
+        }`;
+
+        async function gql(variables){
+          const r = await fetch('https://api.github.com/graphql',{
+            method:'POST',
+            headers:{
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'User-Agent': 'us-table-bot',
+              'GraphQL-Features': 'tracked_issues_graphql_access, sub_issues'
+            },
+            body: JSON.stringify({ query, variables })
+          });
+          const j = await r.json();
+          if (j.errors) throw new Error(JSON.stringify(j.errors,null,2));
+          return j.data;
+        }
+
+        function statusOf(fieldValues){
+          for (const v of fieldValues?.nodes??[]){
+            if (v.__typename==='ProjectV2ItemFieldSingleSelectValue' && v.field?.name==='Status') return v.name||'Unspecified';
+          }
+          return 'Unspecified';
+        }
+
+        function labelNames(n){ return (n?.labels?.nodes??[]).map(x=>x.name); }
+        function parseProfil(labels){
+          const hit = labels.find(n=>n.startsWith('Profil : '));
+          return hit ? hit.split(':')[1].trim() : '';
+        }
+        function findEpic(issue){
+          for (const parent of issue.trackedInIssues?.nodes??[]){
+            console.log('Parent', parent.number, parent.title, labelNames(parent));
+            const labs = labelNames(parent);
+            if (labs.includes(epicLabel)) return parent.title;
+          }
+          return '—';
+        }
+
+        (async ()=>{
+          let after=null, items=[];
+          do{
+            const d = await gql({org, number, after});
+            const proj = d?.organization?.projectV2;
+            if (!proj) {
+              console.error('GraphQL data:', JSON.stringify(d, null, 2));
+              throw new Error(
+              'Project introuvable. Vérifie:\n' +
+              `- org = "${org}" (login exact de l’organisation)\n` +
+              `- project_number = ${number} (numéro visible dans l’URL)\n` +
+              '- le token App a "Projects: read" sur l’org et l’App est installée sur l’org.\n'
+              );
+            }
+            const page = d.organization.projectV2.items;
+            items.push(...page.nodes);
+            after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
+          } while(after);
+
+          const rows = [];
+          for (const it of items){
+            const c = it.content;
+            if (!c || c.__typename!=='Issue') continue;
+            const labels = labelNames(c);
+            if (!labels.includes(profilLabel)) continue;
+
+            const profil = parseProfil(labels) || '—';
+            const epic   = findEpic(c);
+            const us     = c.title.replace(/\|/g,'\\|');
+            const maj    = c.updatedAt?.slice(0,10) || '';
+            rows.push({ profil, epic, us, maj });
+          }
+
+          rows.sort((a,b)=> (a.epic.localeCompare(b.epic) || a.us.localeCompare(b.us)));
+
+          let md = '| Profil | Epic | US | Mise à jour |\n|---|---|---|---|\n';
+          for (const r of rows){
+            md += `| ${r.profil} | ${r.epic} | ${r.us} | ${r.maj} |\n`;
+          }
+          fs.writeFileSync(outFile, md, 'utf8');
+        })().catch(e=>{ console.error(e); process.exit(1); });
+        NODE

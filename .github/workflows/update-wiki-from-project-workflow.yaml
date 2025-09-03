@@ -1,0 +1,83 @@
+name: "Update US table in Wiki"
+on:
+  workflow_call:
+    inputs:
+      org:
+        required: true
+        type: string
+      project_number:
+        required: true
+        type: string
+      wiki_page:
+        required: true
+        type: string
+      start_marker:
+        required: false
+        type: string
+        default: "<!-- US_TABLE_START -->"
+      end_marker:
+        required: false
+        type: string
+        default: "<!-- US_TABLE_END -->"
+      profil_label:
+        required: true
+        type: string
+      epic_label:
+        required: true
+        type: string
+
+jobs:
+  run:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - id: app
+        name: 🔐 GitHub App token
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@feat/522-wiki-automation
+        with:
+          app_id: ${{ secrets.WIKI_APP_ID }}
+          app_private_key: ${{ secrets.WIKI_APP_TOKEN }}
+          owner: ${{ inputs.org }}
+
+      - name: Generate table (US)
+        uses: avenirs-esr/avenirs-workflows/.github/actions/project-to-markdown@feat/522-wiki-automation
+        with:
+          token:          ${{ steps.app.outputs.app-token }}
+          org:            ${{ inputs.org }}
+          project_number: ${{ inputs.project_number }}
+          profil_label:   ${{ inputs.profil_label }}
+          epic_label:     ${{ inputs.epic_label }}
+          out_file:       US_TABLE.md
+
+      - name: Clone wiki of caller repo
+        env:
+          TOKEN: ${{ steps.app.outputs.app-token }}
+        run: |
+          git config --global user.name  "${{ steps.app.outputs.app-slug || 'avenirs-wiki-bot' }}[bot]"
+          git config --global user.email "${{ steps.app.outputs.app-slug || 'avenirs-wiki-bot' }}[bot]@users.noreply.github.com"
+          git clone "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki
+
+      - name: Replace section in page
+        env:
+          START: ${{ inputs.start_marker }}
+          END:   ${{ inputs.end_marker }}
+          PAGE:  ${{ inputs.wiki_page }}
+        run: |
+          test -f "wiki/$PAGE" || { echo -e "# Page\n\n$START\n$END\n" > "wiki/$PAGE"; }
+          TABLE_CONTENT=$(cat US_TABLE.md)
+          awk -v start="$START" -v end="$END" -v repl="$TABLE_CONTENT" '
+            BEGIN{inblock=0}
+            {
+              if (index($0,start)) { print $0; print repl; inblock=1; next }
+              if (index($0,end))   { inblock=0 }
+              if (!inblock) print $0
+            }' "wiki/$PAGE" > wiki/_tmp.md
+          mv wiki/_tmp.md "wiki/$PAGE"
+
+      - name: Commit & push
+        working-directory: wiki
+        run: |
+          git add "${{ inputs.wiki_page }}"
+          git commit -m "chore(wiki): update US table" || echo "No changes"
+          git push
