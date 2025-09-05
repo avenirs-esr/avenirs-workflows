@@ -22,12 +22,12 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Setup Node
+    - name: 🛠️ Setup Node
       uses: actions/setup-node@v4
       with:
         node-version: 20
 
-    - name: Generate Markdown table from Project
+    - name: 📜 Generate Markdown table from Project
       shell: bash
       env:
         TOKEN:          ${{ inputs.token }}
@@ -61,15 +61,12 @@ runs:
                       url
                       updatedAt
                       labels(first:50){ nodes{ name } }
-                      trackedInIssues(first:10){ nodes{
-                        number
-                        title
-                        labels(first:20){ nodes{ name } }
-                      }}
-                      trackedIssues(first:100){ nodes{
-                        number
-                        title
-                        labels(first:20){ nodes{ name } }
+                      parent{ number title url labels(first:10){ nodes{ name } } }
+                      subIssues(first:50){ nodes{
+                          __typename
+                          ... on Issue {
+                            number title url labels(first:10){ nodes{ name } }
+                          }
                       }}
                     }
                   }
@@ -110,33 +107,32 @@ runs:
           return 'Unspecified';
         }
 
-        const norm = s => (s ?? "")
-          .toLowerCase()
-          .replace(/\s*:\s*/g, ":")
-          .trim();
-
+        const norm = s => (s ?? "").toLowerCase().replace(/\s*:\s*/g, ":").trim();
         const labelNames = n => (n?.labels?.nodes ?? []).map(x => x.name);
-        const epicWantedSet = new Set(String(epicLabel)
-          .split(',')
-          .map(s => s.trim())
-          .filter(Boolean)
-          .map(norm));
+        const epicWantedSet = new Set(String(epicLabel).split(',').map(s=>norm(s.trim())).filter(Boolean));
 
         function parseProfil(labels){
           const hit = labels.find(n=>n.startsWith('Profil : '));
           return hit ? hit.split(':')[1].trim() : '';
         }
 
-        function findEpic(childIssue, epicWantedSet){
-          const parents = childIssue.trackedInIssues?.nodes ?? [];
-          for (const p of parents) {
+        function findEpic(childIssue){
+          const p = childIssue.parent;
+          if (p) {
             const labs = new Set(labelNames(p).map(norm));
-            for (const wanted of epicWantedSet) {
-              if (labs.has(wanted)) return p.title;
-            }
+            if ([...epicWantedSet].some(w => labs.has(w))) return p.title;
+            return p.title;
           }
+
+          const parents = childIssue.trackedInIssues?.nodes ?? [];
+          const labelled = parents.filter(p =>
+            [...epicWantedSet].some(w => new Set(labelNames(p).map(norm)).has(w))
+          );
+          if (labelled.length) return labelled[0].title;
+          if (parents.length === 1) return parents[0].title;
+
           if (parents.length) {
-            console.warn(`[DEBUG] Parents vus pour #${childIssue.number} mais aucun label Epic correspondant. Parents:`,
+            console.warn(`[DEBUG] #${childIssue.number} parents non-Epic via checklist:`,
             parents.map(p => ({ title: p.title, labels: labelNames(p) })));
           }
           return null;
@@ -158,27 +154,36 @@ runs:
             }
             const page = d.organization.projectV2.items;
             items.push(...page.nodes);
-            console.warn(`[DEBUG] Récupérés ${items.length} items…`);
-            console.warn(`[DEBUG] Exemple de statut:`, statusOf(page.nodes[0]?.fieldValues));
-            console.warn(`[DEBUG] Exemple d'un item:`, JSON.stringify(page.nodes[0], null, 2));
             after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
           } while(after);
+
+          const childToEpicTitle = new Map();
+          for (const it of items) {
+            const c = it.content;
+            if (!c || c.__typename !== 'Issue') continue;
+            const isEpic = [...epicWantedSet].some(w => new Set(labelNames(c).map(norm)).has(w));
+            if (!isEpic) continue;
+              for (const child of (c.subIssues?.nodes ?? [])) {
+              childToEpicTitle.set(child.url, c.title);
+            }
+          }
 
           const rows = [];
           for (const it of items){
             const c = it.content;
-            if (labelNames(c).find(n=>n.startsWith('Epic'))) {
-              console.warn(`[DEBUG] Epic #${c.number} "${c.title}" ---- "${c.__typename}" ---- "${labelNames(c)}"`);
-            }
             if (!c || c.__typename!=='Issue') continue;
             const labels = labelNames(c);
-            if (!labels.includes(profilLabel) || (!labels.includes(profilLabel) && !labels.includes(epicLabel))) continue;
+            if (!labels.includes(profilLabel)) continue;
 
             const profil = parseProfil(labels) || '—';
-            const epic   = findEpic(c, epicWantedSet) || '—';
+            let epic   = findEpic(c, epicWantedSet);
+            if (!epic) {
+              const fromMap = childToEpicTitle.get(c.url);
+              if (fromMap) epic = fromMap;
+            }
             const us     = c.title.replace(/\|/g,'\\|');
             const maj    = c.updatedAt?.slice(0,10) || '';
-            rows.push({ profil, epic, us, maj });
+            rows.push({ profil, epic: epic || '—', us, maj });
           }
 
           rows.sort((a,b)=> (a.epic.localeCompare(b.epic) || a.us.localeCompare(b.us)));
