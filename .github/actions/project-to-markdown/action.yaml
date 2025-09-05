@@ -186,7 +186,14 @@ runs:
             rows.push({ profil, epic: epic || '—', us, maj });
           }
 
-          rows.sort((a,b)=> (a.epic.localeCompare(b.epic) || a.us.localeCompare(b.us)));
+          rows.sort((a, b) => {
+            const aHas = a.epic && a.epic !== '—';
+            const bHas = b.epic && b.epic !== '—';
+            if (aHas !== bHas) return aHas ? -1 : 1;
+            const e = (a.epic || '').localeCompare(b.epic || '', 'fr', { sensitivity: 'base', numeric: true });
+            if (e !== 0) return e;
+            return a.us.localeCompare(b.us, 'fr', { sensitivity: 'base', numeric: true });
+          });
 
           let md = '| Profil | Epic | US | Mise à jour |\n|---|---|---|---|\n';
           for (const r of rows){
