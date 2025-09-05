@@ -27,7 +27,7 @@ on:
         type: string
 
 jobs:
-  run:
+  update-wiki:
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -50,7 +50,7 @@ jobs:
           epic_label:     ${{ inputs.epic_label }}
           out_file:       US_TABLE.md
 
-      - name: Clone wiki of caller repo
+      - name: 📥 Clone wiki of caller repo
         env:
           TOKEN: ${{ steps.app.outputs.app-token }}
         run: |
@@ -58,7 +58,7 @@ jobs:
           git config --global user.email "${{ steps.app.outputs.app-slug || 'avenirs-wiki-bot' }}[bot]@users.noreply.github.com"
           git clone "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki
 
-      - name: Replace section in page
+      - name: 🔄️ Replace section in page
         env:
           START: ${{ inputs.start_marker }}
           END:   ${{ inputs.end_marker }}
@@ -75,7 +75,7 @@ jobs:
             }' "wiki/$PAGE" > wiki/_tmp.md
           mv wiki/_tmp.md "wiki/$PAGE"
 
-      - name: Commit & push
+      - name: 📤 Commit & push
         working-directory: wiki
         run: |
           git add "${{ inputs.wiki_page }}"
