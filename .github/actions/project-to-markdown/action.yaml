@@ -105,18 +105,36 @@ runs:
           return 'Unspecified';
         }
 
-        function labelNames(n){ return (n?.labels?.nodes??[]).map(x=>x.name); }
+        const norm = s => (s ?? "")
+          .toLowerCase()
+          .replace(/\s*:\s*/g, ":")
+          .trim();
+
+        const labelNames = n => (n?.labels?.nodes ?? []).map(x => x.name);
+        const epicWantedSet = new Set(String(epicLabel)
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean)
+          .map(norm));
+
         function parseProfil(labels){
           const hit = labels.find(n=>n.startsWith('Profil : '));
           return hit ? hit.split(':')[1].trim() : '';
         }
-        function findEpic(issue){
-          for (const parent of issue.trackedInIssues?.nodes??[]){
-            console.log('Parent', parent.number, parent.title, labelNames(parent));
-            const labs = labelNames(parent);
-            if (labs.includes(epicLabel)) return parent.title;
+
+        function findEpic(childIssue, epicWantedSet){
+          const parents = childIssue.trackedInIssues?.nodes ?? [];
+          for (const p of parents) {
+            const labs = new Set(labelNames(p).map(norm));
+            for (const wanted of epicWantedSet) {
+              if (labs.has(wanted)) return p.title;
+            }
           }
-          return '—';
+          if (parents.length) {
+            console.warn(`[DEBUG] Parents vus pour #${childIssue.number} mais aucun label Epic correspondant. Parents:`,
+            parents.map(p => ({ title: p.title, labels: labelNames(p) })));
+          }
+          return null;
         }
 
         (async ()=>{
@@ -135,18 +153,24 @@ runs:
             }
             const page = d.organization.projectV2.items;
             items.push(...page.nodes);
+            console.warn(`[DEBUG] Récupérés ${items.length} items…`);
+            console.warn(`[DEBUG] Exemple de statut:`, statusOf(page.nodes[0]?.fieldValues));
+            console.warn(`[DEBUG] Exemple d'un item:`, JSON.stringify(page.nodes[0], null, 2));
             after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
           } while(after);
 
           const rows = [];
           for (const it of items){
             const c = it.content;
+            if (labelNames(c).find(n=>n.startsWith('Epic'))) {
+              console.warn(`[DEBUG] Epic #${c.number} "${c.title}" ---- "${c.__typename}" ---- "${labelNames(c)}"`);
+            }
             if (!c || c.__typename!=='Issue') continue;
             const labels = labelNames(c);
-            if (!labels.includes(profilLabel)) continue;
+            if (!labels.includes(profilLabel) || (!labels.includes(profilLabel) && !labels.includes(epicLabel))) continue;
 
             const profil = parseProfil(labels) || '—';
-            const epic   = findEpic(c);
+            const epic   = findEpic(c, epicWantedSet) || '—';
             const us     = c.title.replace(/\|/g,'\\|');
             const maj    = c.updatedAt?.slice(0,10) || '';
             rows.push({ profil, epic, us, maj });
