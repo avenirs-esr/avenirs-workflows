@@ -138,6 +138,11 @@ runs:
           return null;
         }
 
+        function parseImprovementRef(title) {
+          const m = String(title).match(/\bv\s*(\d+)\b[^#]*#\s*(\d+)/i);
+          return m ? { version: parseInt(m[1], 10), base: parseInt(m[2], 10) } : null;
+        }
+
         (async ()=>{
           let after=null, items=[];
           do{
@@ -157,14 +162,19 @@ runs:
             after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
           } while(after);
 
-          const childToEpicTitle = new Map();
+          const improvementsByBase = new Map();
           for (const it of items) {
+            console.warn('[DEBUG] processing for improvements:', it.content?.title);
             const c = it.content;
             if (!c || c.__typename !== 'Issue') continue;
-            const isEpic = [...epicWantedSet].some(w => new Set(labelNames(c).map(norm)).has(w));
-            if (!isEpic) continue;
-              for (const child of (c.subIssues?.nodes ?? [])) {
-              childToEpicTitle.set(child.url, c.title);
+
+            const labels = labelNames(c);
+            if (!labels.includes(profilLabel)) continue;
+
+            const ref = parseImprovementRef(c.title);
+            if (ref) {
+              if (!improvementsByBase.has(ref.base)) improvementsByBase.set(ref.base, []);
+              improvementsByBase.get(ref.base).push(c.title);
             }
           }
 
@@ -174,16 +184,14 @@ runs:
             if (!c || c.__typename!=='Issue') continue;
             const labels = labelNames(c);
             if (!labels.includes(profilLabel)) continue;
+            if (parseImprovementRef(c.title)) continue;
 
             const profil = parseProfil(labels) || '—';
-            let epic   = findEpic(c, epicWantedSet);
-            if (!epic) {
-              const fromMap = childToEpicTitle.get(c.url);
-              if (fromMap) epic = fromMap;
-            }
+            const epic   = findEpic(c, epicWantedSet) || '—';
             const us     = c.title.replace(/\|/g,'\\|');
-            const maj    = c.updatedAt?.slice(0,10) || '';
-            rows.push({ profil, epic: epic || '—', us, maj });
+            const updates = improvementsByBase.get(c.number) || [];
+            const maj = updates.join(' ; ');
+            rows.push({ profil, epic, us, maj });
           }
 
           rows.sort((a, b) => {
