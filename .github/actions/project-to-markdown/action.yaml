@@ -66,6 +66,11 @@ runs:
                         title
                         labels(first:20){ nodes{ name } }
                       }}
+                      trackedIssues(first:100){ nodes{
+                        number
+                        title
+                        labels(first:20){ nodes{ name } }
+                      }}
                     }
                   }
                   fieldValues(first:5){ nodes{
