@@ -34,14 +34,14 @@ jobs:
     steps:
       - id: app
         name: 🔐 GitHub App token
-        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@feat/522-wiki-automation
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
         with:
           app_id: ${{ secrets.WIKI_APP_ID }}
           app_private_key: ${{ secrets.WIKI_APP_TOKEN }}
           owner: ${{ inputs.org }}
 
-      - name: Generate table (US)
-        uses: avenirs-esr/avenirs-workflows/.github/actions/project-to-markdown@feat/522-wiki-automation
+      - name: ✍️ Generate table (US)
+        uses: avenirs-esr/avenirs-workflows/.github/actions/project-to-markdown@main
         with:
           token:          ${{ steps.app.outputs.app-token }}
           org:            ${{ inputs.org }}
