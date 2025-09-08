@@ -10,9 +10,9 @@ inputs:
   project_number:
     required: true
     description: "Project number (not ID)"
-  profil_label:
+  profile_label:
     required: true
-    description: "Profil label to filter User Stories. Ex: 'Profil: Apprenant'"
+    description: "Profile label to filter User Stories. Ex: 'Profil: Apprenant'"
   epic_label:
     required: true
     description: "Epic label to identify epics. Ex: 'Type: Epic'"
@@ -33,7 +33,7 @@ runs:
         TOKEN:          ${{ inputs.token }}
         ORG:            ${{ inputs.org }}
         PROJECT_NUMBER: ${{ inputs.project_number }}
-        PROFIL_LABEL:   ${{ inputs.profil_label }}
+        PROFILE_LABEL:   ${{ inputs.profile_label }}
         EPIC_LABEL:     ${{ inputs.epic_label }}
         OUT_FILE:       ${{ inputs.out_file }}
       run: |
@@ -43,7 +43,7 @@ runs:
         const token   = process.env.TOKEN;
         const org     = process.env.ORG;
         const number  = parseInt(process.env.PROJECT_NUMBER,10);
-        const profilLabel = process.env.PROFIL_LABEL;
+        const profileLabel = process.env.PROFILE_LABEL;
         const epicLabel   = process.env.EPIC_LABEL;
         const outFile     = process.env.OUT_FILE;
 
@@ -111,7 +111,7 @@ runs:
         const labelNames = n => (n?.labels?.nodes ?? []).map(x => x.name);
         const epicWantedSet = new Set(String(epicLabel).split(',').map(s=>norm(s.trim())).filter(Boolean));
 
-        function parseProfil(labels){
+        function parseProfile(labels){
           const hit = labels.find(n=>n.startsWith('Profil : '));
           return hit ? hit.split(':')[1].trim() : '';
         }
@@ -139,7 +139,8 @@ runs:
         }
 
         function parseImprovementRef(title) {
-          const m = String(title).match(/\bv\s*(\d+)\b[^#]*#\s*(\d+)/i);
+          const regex = /\bv\s*(\d+)\b[^#]*#\s*(\d+)/i;
+          const m = String(title).match(regex);
           return m ? { version: parseInt(m[1], 10), base: parseInt(m[2], 10) } : null;
         }
 
@@ -151,7 +152,7 @@ runs:
             if (!proj) {
               console.error('GraphQL data:', JSON.stringify(d, null, 2));
               throw new Error(
-              'Project introuvable. Vérifie:\n' +
+              'Projet introuvable. Vérifie:\n' +
               `- org = "${org}" (login exact de l’organisation)\n` +
               `- project_number = ${number} (numéro visible dans l’URL)\n` +
               '- le token App a "Projects: read" sur l’org et l’App est installée sur l’org.\n'
@@ -169,7 +170,7 @@ runs:
             if (!c || c.__typename !== 'Issue') continue;
 
             const labels = labelNames(c);
-            if (!labels.includes(profilLabel)) continue;
+            if (!labels.includes(profileLabel)) continue;
 
             const ref = parseImprovementRef(c.title);
             if (ref) {
@@ -183,15 +184,15 @@ runs:
             const c = it.content;
             if (!c || c.__typename!=='Issue') continue;
             const labels = labelNames(c);
-            if (!labels.includes(profilLabel)) continue;
+            if (!labels.includes(profileLabel)) continue;
             if (parseImprovementRef(c.title)) continue;
 
-            const profil = parseProfil(labels) || '—';
+            const profile = parseProfile(labels) || '—';
             const epic   = findEpic(c, epicWantedSet) || '—';
             const us     = c.title.replace(/\|/g,'\\|');
             const updates = improvementsByBase.get(c.number) || [];
             const maj = updates.join(' ; ');
-            rows.push({ profil, epic, us, maj });
+            rows.push({ profile, epic, us, maj });
           }
 
           rows.sort((a, b) => {
@@ -205,7 +206,7 @@ runs:
 
           let md = '| Profil | Epic | US | Mise à jour |\n|---|---|---|---|\n';
           for (const r of rows){
-            md += `| ${r.profil} | ${r.epic} | ${r.us} | ${r.maj} |\n`;
+            md += `| ${r.profile} | ${r.epic} | ${r.us} | ${r.maj} |\n`;
           }
           fs.writeFileSync(outFile, md, 'utf8');
         })().catch(e=>{ console.error(e); process.exit(1); });

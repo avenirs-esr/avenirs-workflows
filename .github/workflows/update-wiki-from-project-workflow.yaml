@@ -19,7 +19,7 @@ on:
         required: false
         type: string
         default: "<!-- US_TABLE_END -->"
-      profil_label:
+      profile_label:
         required: true
         type: string
       epic_label:
@@ -46,7 +46,7 @@ jobs:
           token:          ${{ steps.app.outputs.app-token }}
           org:            ${{ inputs.org }}
           project_number: ${{ inputs.project_number }}
-          profil_label:   ${{ inputs.profil_label }}
+          profile_label:   ${{ inputs.profile_label }}
           epic_label:     ${{ inputs.epic_label }}
           out_file:       US_TABLE.md
 
