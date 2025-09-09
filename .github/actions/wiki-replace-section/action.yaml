@@ -1,0 +1,34 @@
+name: "Wiki replace sections per-Epic tables"
+description: "Replace or append per-epic tables between numbered start/end markers in a wiki page"
+inputs:
+  wiki_page:
+    description: "Path to the wiki page (e.g. wiki/MyPage.md)"
+    required: true
+  tables_dir:
+    description: "Directory containing epic-<num>.md files"
+    required: false
+    default: "epic_tables"
+  marker_prefix:
+    description: "Prefix for markers (e.g. US_TABLE)"
+    required: false
+    default: "US_TABLE"
+  create_missing_section:
+    description: "Append section at the end if markers are missing for an epic"
+    required: false
+    default: "true"
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Replace sections
+      shell: bash
+      env:
+        WIKI_PAGE:  ${{ inputs.wiki_page }}
+        TABLES_DIR: ${{ inputs.tables_dir }}
+        PREFIX:     ${{ inputs.marker_prefix }}
+        CREATE_MISS: ${{ inputs.create_missing_section }}
+      run: node "$GITHUB_ACTION_PATH/wiki-replace-section.js"
