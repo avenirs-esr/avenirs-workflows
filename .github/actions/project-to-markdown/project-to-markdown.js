@@ -28,6 +28,13 @@ query($org:String!, $number:Int!, $after:String){
               }}
             }
           }
+          fieldValues(first:20){ nodes{
+            __typename
+            ... on ProjectV2ItemFieldSingleSelectValue {
+              field { __typename ... on ProjectV2SingleSelectField { name } }
+              name
+            }
+          }}
         }
         pageInfo{ hasNextPage endCursor }
       }
@@ -67,6 +74,26 @@ function parseImprovementRef(title) {
   const regex = /\bv\s*(\d+)\b[^#]*#\s*(\d+)/i;
   const m = String(title).match(regex);
   return m ? { version: parseInt(m[1],10), base: parseInt(m[2],10) } : null;
+}
+
+function statusFromFieldValues(fieldValues){
+  for (const v of (fieldValues?.nodes ?? [])) {
+    if (v.__typename === 'ProjectV2ItemFieldSingleSelectValue' && v.field?.name === 'Status') {
+      return v.name || '';
+    }
+  }
+  return '';
+}
+
+function statusToDot(name){
+  const n = norm(name);
+  const done = new Set(['done','terminé','termine','complete','completed','fait','résolu','resolved','closed']);
+  const doing = new Set(['in progress','en cours','doing','wip']);
+  const todo = new Set(['todo','to do','à faire','a faire','not started','backlog','open']);
+  if (done.has(n))  return '🟢';
+  if (doing.has(n)) return '🟡';
+  if (todo.has(n))  return '⚪️';
+  return '⚪️';
 }
 
 (async ()=>{
@@ -128,9 +155,12 @@ function parseImprovementRef(title) {
       if (t) epicTitle = t;
     }
 
+    const statusName = statusFromFieldValues(it.fieldValues);
+    const etat = statusToDot(statusName);
+
     const us  = escapeCell(c.title);
     const maj = (improvementsByBase.get(c.number) || []).join(' ; ');
-    rows.push({ profile, epic: epicTitle, epicNum, us, maj });
+    rows.push({ profile, epic: epicTitle, epicNum, us, etat, maj });
   }
 
   rows.sort((a, b) => {
@@ -142,9 +172,9 @@ function parseImprovementRef(title) {
     return a.us.localeCompare(b.us, 'fr', { sensitivity: 'base', numeric: true });
   });
 
-  let md = '| Profil | Epic | US | Mise à jour |\n|---|---|---|---|\n';
+  let md = '| Profil | Epic | US | État | Mise à jour |\n|---|---|---|:--:|---|\n';
   for (const r of rows){
-    md += `| ${r.profile} | ${r.epic} | ${r.us} | ${r.maj} |\n`;
+    md += `| ${r.profile} | ${r.epic} | ${r.us} | ${r.etat} | ${r.maj} |\n`;
   }
   fs.writeFileSync(outFile, md, 'utf8');
 
@@ -160,9 +190,9 @@ function parseImprovementRef(title) {
 
   fs.mkdirSync('epic_tables', { recursive: true });
   for (const [key, arr] of groups) {
-    let t = '| Profil | US | Mise à jour |\n|---|---|---|\n';
+    let t = '| Profil | US | État | Mise à jour |\n|---|---|:--:|---|\n';
     for (const r of arr) {
-      t += `| ${r.profile} | ${r.us} | ${r.maj} |\n`;
+      t += `| ${r.profile} | ${r.us} | ${r.etat} | ${r.maj} |\n`;
     }
     const name = key === 'none' ? 'epic-none.md' : `epic-${key}.md`;
     fs.writeFileSync(`epic_tables/${name}`, t, 'utf8');
