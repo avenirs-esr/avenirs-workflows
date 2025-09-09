@@ -41,7 +41,7 @@ jobs:
           owner: ${{ inputs.org }}
 
       - name: ✍️ Generate table (US)
-        uses: avenirs-esr/avenirs-workflows/.github/actions/project-to-markdown@main
+        uses: avenirs-esr/avenirs-workflows/.github/actions/project-to-markdown@feat/522-wiki-automation
         with:
           token:          ${{ steps.app.outputs.app-token }}
           org:            ${{ inputs.org }}
@@ -64,20 +64,43 @@ jobs:
           END:   ${{ inputs.end_marker }}
           PAGE:  ${{ inputs.wiki_page }}
         run: |
+          set -euo pipefail
+
           test -f "wiki/$PAGE" || { echo -e "# Page\n\n$START\n$END\n" > "wiki/$PAGE"; }
-          TABLE_CONTENT=$(cat US_TABLE.md)
-          awk -v start="$START" -v end="$END" -v repl="$TABLE_CONTENT" '
-            BEGIN{inblock=0}
-            {
-              if (index($0,start)) { print $0; print repl; inblock=1; next }
-              if (index($0,end))   { inblock=0 }
-              if (!inblock) print $0
-            }' "wiki/$PAGE" > wiki/_tmp.md
+
+          ALL="ALL_TABLES.md"
+          if [ -d epic_tables ]; then
+          : > "$ALL"
+          ls -1v epic_tables/epic-*.md 2>/dev/null | xargs -r -I{} sh -c 'echo; cat "{}"' >> "$ALL"
+          if [ -f epic_tables/epic-none.md ]; then
+          echo >> "$ALL"
+          cat epic_tables/epic-none.md >> "$ALL"
+          fi
+          elif [ -f US_TABLE.md ]; then
+          cp US_TABLE.md "$ALL"
+          else
+          : > "$ALL"
+          fi
+
+          awk -v start="$START" -v end="$END" -v replfile="$ALL" '
+          BEGIN{inblock=0}
+          {
+            if (index($0,start)) {
+            print $0
+            while ((getline l < replfile) > 0) print l
+            close(replfile)
+            inblock=1
+            next
+          }
+            if (index($0,end)) { inblock=0 }
+            if (!inblock) print $0
+          }' "wiki/$PAGE" > wiki/_tmp.md
+
           mv wiki/_tmp.md "wiki/$PAGE"
 
       - name: 📤 Commit & push
         working-directory: wiki
         run: |
           git add "${{ inputs.wiki_page }}"
-          git commit -m "chore(wiki): update US table" || echo "No changes"
-          git push
+                git commit -m "chore(wiki): update US table" || echo "No changes"
+                git push
