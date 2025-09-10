@@ -106,6 +106,10 @@ const norm = s => (s ?? "").toLowerCase().replace(/\s*:\s*/g, ":").trim();
 const labelNames = n => (n?.labels?.nodes ?? []).map(x => x.name);
 const epicWantedSet = new Set(String(epicLabel).split(',').map(s=>norm(s.trim())).filter(Boolean));
 const escapeCell = s => String(s??'').replace(/\|/g,'\\|');
+const doneDot = '🟢';
+const inProgressDot = '🟡';
+const todoDot = '⚪️';
+const wontDot = '🔴';
 
 function parseProfile(labels){
   const regex = /^Profil\s*:\s*/i;
@@ -127,10 +131,10 @@ function statusToDot(name){
     .replace(/\s+/g, ' ')
     .trim();
 
-  if (/(^|\b)(done)(\b|$)/.test(n)) return '🟢';
-  if (/(^|\b)(wont do)(\b|$)/.test(n)) return '🔴';
-  if (/(^|\b)(in progress|in review|recette)(\b|$)/.test(n)) return '🟡';
-  return '⚪️';
+  if (/(^|\b)(done)(\b|$)/.test(n)) return doneDot;
+  if (/(^|\b)(wont do)(\b|$)/.test(n)) return wontDot;
+  if (/(^|\b)(in progress|in review|recette)(\b|$)/.test(n)) return inProgressDot;
+  return todoDot;
 }
 
 function getFieldsForProject(issueNode, projectNumber){
@@ -161,12 +165,16 @@ function getFieldsForProject(issueNode, projectNumber){
   } while(after);
 
   const childToEpicNumber = new Map();
+  const epicTitleByNum = new Map();
+  const epicUrlByNum   = new Map();
   for (const it of items) {
     const c = it.content;
     if (!c || c.__typename !== 'Issue') continue;
     const labs = new Set(labelNames(c).map(norm));
     const isEpic = [...epicWantedSet].some(w => labs.has(w));
     if (!isEpic) continue;
+    epicTitleByNum.set(c.number, c.title);
+    epicUrlByNum.set(c.number, c.url);
     for (const child of (c.subIssues?.nodes ?? [])) {
       childToEpicNumber.set(child.url, c.number);
     }
@@ -201,7 +209,6 @@ function getFieldsForProject(issueNode, projectNumber){
     }
 
     const cofolio = getFieldsForProject(c, 16);
-    console.warn(`Processing #${c.number} "${c.title}" cofolio=${JSON.stringify(cofolio)}`);
     const row = {
       profile: parseProfile(labels) || '—',
       us: escapeCell(c.title),
@@ -220,8 +227,12 @@ function getFieldsForProject(issueNode, projectNumber){
   }
 
   fs.mkdirSync('epic_tables', { recursive: true });
+  const LEGEND = `*Légende :* ${doneDot} Terminé · ${inProgressDot} En cours/Review/Recette · ${todoDot} À faire · ${wontDot} Won’t do`;
   for (const [key, arr] of groups) {
-    let t = '| Profil | US | Sprint | État | Mise à jour |\n|---|---|:--:|:--:|---|\n';
+    const epNum = key === 'none' ? null : Number(key);
+    const epTitle = epNum ? (epicTitleByNum.get(epNum) || `Epic #${epNum}`) : 'Sans Epic';
+    const TITLE = `#### Tableau de fonctionnalités de l'épic : **${escapeCell(epTitle)}**`;
+    let t = `${TITLE}\n\n${LEGEND}\n\n| Profil | US | Sprint | État | Mise à jour |\n|---|---|:--:|:--:|---|\n`;
     for (const r of arr) t += `| ${r.profile} | ${r.us} | ${r.sprint} | ${r.etat} | ${r.maj} |\n`;
     const name = key === 'none' ? 'epic-none.md' : `epic-${key}.md`;
     fs.writeFileSync(`epic_tables/${name}`, t, 'utf8');
