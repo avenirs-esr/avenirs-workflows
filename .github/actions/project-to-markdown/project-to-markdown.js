@@ -5,42 +5,85 @@ const org     = process.env.ORG;
 const number  = parseInt(process.env.PROJECT_NUMBER,10);
 const profileLabel = process.env.PROFILE_LABEL;
 const epicLabel    = process.env.EPIC_LABEL;
-const outFile      = process.env.OUT_FILE;
 
 const query = `
-query($org:String!, $number:Int!, $after:String){
-  organization(login:$org){
-    projectV2(number:$number){
-      items(first:100, after:$after){
-        nodes{
-          content{
+query ($org: String!, $number: Int!, $after: String) {
+  organization(login: $org) {
+    projectV2(number: $number) {
+      items(first: 100, after: $after) {
+        nodes {
+          content {
             __typename
             ... on Issue {
               number
               title
               url
-              updatedAt
-              labels(first:50){ nodes{ name } }
-              parent{ number title url labels(first:10){ nodes{ name } } }
-              subIssues(first:100){ nodes{
-                __typename
-                ... on Issue { number title url labels(first:10){ nodes{ name } } }
-              }}
+              labels(first: 50) {
+                nodes { name }
+              }
+              parent {
+                number
+                title
+                url
+              }
+              subIssues(first: 100) {
+                nodes {
+                  __typename
+                  ... on Issue {
+                    number
+                    title
+                    url
+                  }
+                }
+              }
+              projectItems(first: 10) {
+                nodes {
+                  project {
+                    number
+                    title
+                  }
+                  fieldValues(first: 20) {
+                    nodes {
+                      __typename
+                      ... on ProjectV2ItemFieldSingleSelectValue {
+                        field { ... on ProjectV2SingleSelectField { name } }
+                        name
+                      }
+                      ... on ProjectV2ItemFieldIterationValue {
+                        field { ... on ProjectV2IterationField { name } }
+                        title
+                        startDate
+                        duration
+                      }
+                      ... on ProjectV2ItemFieldTextValue {
+                        field { ... on ProjectV2FieldCommon { name } }
+                        text
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
-          fieldValues(first:20){ nodes{
-            __typename
-            ... on ProjectV2ItemFieldSingleSelectValue {
-              field { __typename ... on ProjectV2SingleSelectField { name } }
-              name
+          fieldValues(first: 20) {
+            nodes {
+              __typename
+              ... on ProjectV2ItemFieldSingleSelectValue {
+                field { ... on ProjectV2SingleSelectField { name } }
+                name
+              }
             }
-          }}
+          }
         }
-        pageInfo{ hasNextPage endCursor }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
       }
     }
   }
-}`;
+}
+`;
 
 async function gql(variables){
   const r = await fetch('https://api.github.com/graphql',{
@@ -76,24 +119,34 @@ function parseImprovementRef(title) {
   return m ? { version: parseInt(m[1],10), base: parseInt(m[2],10) } : null;
 }
 
-function statusFromFieldValues(fieldValues){
-  for (const v of (fieldValues?.nodes ?? [])) {
-    if (v.__typename === 'ProjectV2ItemFieldSingleSelectValue' && v.field?.name === 'Status') {
-      return v.name || '';
-    }
-  }
-  return '';
+function statusToDot(name){
+  const n = String(name ?? '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_\-’'.,:;()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (/(^|\b)(done)(\b|$)/.test(n)) return '🟢';
+  if (/(^|\b)(wont do)(\b|$)/.test(n)) return '🔴';
+  if (/(^|\b)(in progress|in review|recette)(\b|$)/.test(n)) return '🟡';
+  return '⚪️';
 }
 
-function statusToDot(name){
-  const n = norm(name);
-  const done = new Set(['done','terminé','termine','complete','completed','fait','résolu','resolved','closed']);
-  const doing = new Set(['in progress','en cours','doing','wip']);
-  const todo = new Set(['todo','to do','à faire','a faire','not started','backlog','open']);
-  if (done.has(n))  return '🟢';
-  if (doing.has(n)) return '🟡';
-  if (todo.has(n))  return '⚪️';
-  return '⚪️';
+function getFieldsForProject(issueNode, projectNumber){
+  const item = issueNode.projectItems?.nodes?.find(pi => pi.project?.number === projectNumber);
+  if (!item) return {};
+  const out = {};
+  for (const v of item.fieldValues?.nodes ?? []) {
+    if (v.__typename === 'ProjectV2ItemFieldSingleSelectValue') {
+      const fname = String(v.field?.name || '').trim().toLowerCase();
+      if (fname === 'status') out.status = v.name || '';
+    } else if (v.__typename === 'ProjectV2ItemFieldIterationValue') {
+      const fname = String(v.field?.name || '').trim().toLowerCase();
+      if (fname === 'sprint') out.sprint = v.title || '';
+    }
+  }
+  return out;
 }
 
 (async ()=>{
@@ -107,9 +160,7 @@ function statusToDot(name){
     after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
   } while(after);
 
-  const childToEpicTitle = new Map();
   const childToEpicNumber = new Map();
-
   for (const it of items) {
     const c = it.content;
     if (!c || c.__typename !== 'Issue') continue;
@@ -117,7 +168,6 @@ function statusToDot(name){
     const isEpic = [...epicWantedSet].some(w => labs.has(w));
     if (!isEpic) continue;
     for (const child of (c.subIssues?.nodes ?? [])) {
-      childToEpicTitle.set(child.url, c.title);
       childToEpicNumber.set(child.url, c.number);
     }
   }
@@ -133,67 +183,46 @@ function statusToDot(name){
     }
   }
 
-  const rows = [];
+  const groups = new Map();
+
   for (const it of items){
     const c = it.content;
     if (!c || c.__typename!=='Issue') continue;
+
     const labels = labelNames(c);
     if (!labels.includes(profileLabel)) continue;
     if (parseImprovementRef(c.title)) continue;
 
-    const profile = parseProfile(labels) || '—';
-
-    let epicTitle = '—';
     let epicNum = null;
-    if (c.parent) {
-      epicTitle = c.parent.title || '—';
-      epicNum = c.parent.number || null;
+    if (c.parent?.number) {
+      epicNum = c.parent.number;
     } else {
-      const n = childToEpicNumber.get(c.url);
-      const t = childToEpicTitle.get(c.url);
-      if (n) epicNum = n;
-      if (t) epicTitle = t;
+      epicNum = childToEpicNumber.get(c.url) || null;
     }
 
-    const statusName = statusFromFieldValues(it.fieldValues);
-    const etat = statusToDot(statusName);
+    const cofolio = getFieldsForProject(c, 16);
+    console.warn(`Processing #${c.number} "${c.title}" cofolio=${JSON.stringify(cofolio)}`);
+    const row = {
+      profile: parseProfile(labels) || '—',
+      us: escapeCell(c.title),
+      sprint: cofolio.sprint || '—',
+      etat: statusToDot(cofolio.status),
+      maj: (improvementsByBase.get(c.number) || []).join(' ; ')
+    };
 
-    const us  = escapeCell(c.title);
-    const maj = (improvementsByBase.get(c.number) || []).join(' ; ');
-    rows.push({ profile, epic: epicTitle, epicNum, us, etat, maj });
-  }
-
-  rows.sort((a, b) => {
-    const aHas = a.epic && a.epic !== '—';
-    const bHas = b.epic && b.epic !== '—';
-    if (aHas !== bHas) return aHas ? -1 : 1;
-    const e = (a.epic || '').localeCompare(b.epic || '', 'fr', { sensitivity: 'base', numeric: true });
-    if (e !== 0) return e;
-    return a.us.localeCompare(b.us, 'fr', { sensitivity: 'base', numeric: true });
-  });
-
-  let md = '| Profil | Epic | US | État | Mise à jour |\n|---|---|---|:--:|---|\n';
-  for (const r of rows){
-    md += `| ${r.profile} | ${r.epic} | ${r.us} | ${r.etat} | ${r.maj} |\n`;
-  }
-  fs.writeFileSync(outFile, md, 'utf8');
-
-  const groups = new Map();
-  for (const r of rows) {
-    const key = r.epicNum ? String(r.epicNum) : 'none';
+    const key = epicNum ? String(epicNum) : 'none';
     if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(r);
+    groups.get(key).push(row);
   }
+
   for (const [k, arr] of groups) {
     arr.sort((a,b)=> a.us.localeCompare(b.us, 'fr', { sensitivity:'base', numeric:true }));
   }
 
   fs.mkdirSync('epic_tables', { recursive: true });
   for (const [key, arr] of groups) {
-    let t = '| Profil | US | État | Mise à jour |\n|---|---|:--:|---|\n';
-    for (const r of arr) {
-      t += `| ${r.profile} | ${r.us} | ${r.etat} | ${r.maj} |\n`;
-    }
+    let t = '| Profil | US | Sprint | État | Mise à jour |\n|---|---|:--:|:--:|---|\n';
+    for (const r of arr) t += `| ${r.profile} | ${r.us} | ${r.sprint} | ${r.etat} | ${r.maj} |\n`;
     const name = key === 'none' ? 'epic-none.md' : `epic-${key}.md`;
     fs.writeFileSync(`epic_tables/${name}`, t, 'utf8');
   }
