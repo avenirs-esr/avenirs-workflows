@@ -106,10 +106,10 @@ const norm = s => (s ?? "").toLowerCase().replace(/\s*:\s*/g, ":").trim();
 const labelNames = n => (n?.labels?.nodes ?? []).map(x => x.name);
 const epicWantedSet = new Set(String(epicLabel).split(',').map(s=>norm(s.trim())).filter(Boolean));
 const escapeCell = s => String(s??'').replace(/\|/g,'\\|');
-const doneDot = '🟢';
-const inProgressDot = '🟡';
-const todoDot = '⚪️';
-const wontDot = '🔴';
+const doneDot = '✅';
+const inProgressDot = '⏳';
+const todoDot = '📝';
+const wontDot = '❌';
 
 function parseProfile(labels){
   const regex = /^Profil\s*:\s*/i;
@@ -118,8 +118,8 @@ function parseProfile(labels){
 }
 
 function parseImprovementRef(title) {
-  const regex = /\bv\s*(\d+)\b[^#]*#\s*(\d+)/i;
-  const m = String(title).match(regex);
+  const version_regex = /\bv\s*(\d+)\b[^#]*#\s*(\d+)/i;
+  const m = String(title).match(version_regex);
   return m ? { version: parseInt(m[1],10), base: parseInt(m[2],10) } : null;
 }
 
