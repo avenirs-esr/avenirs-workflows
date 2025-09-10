@@ -37,7 +37,7 @@ jobs:
           owner: ${{ inputs.org }}
 
       - name: ✍️ Generate table (US)
-        uses: avenirs-esr/avenirs-workflows/.github/actions/project-to-markdown@feat/522-wiki-automation
+        uses: avenirs-esr/avenirs-workflows/.github/actions/project-to-markdown@main
         with:
           token:          ${{ steps.app.outputs.app-token }}
           org:            ${{ inputs.org }}
@@ -55,7 +55,7 @@ jobs:
           git clone "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki
 
       - name: 🔄️ Replace section in page
-        uses: avenirs-esr/avenirs-workflows/.github/actions/wiki-replace-section@feat/522-wiki-automation
+        uses: avenirs-esr/avenirs-workflows/.github/actions/wiki-replace-section@main
         with:
           marker_prefix: ${{ inputs.marker_prefix }}
           wiki_page:   wiki/${{ inputs.wiki_page }}
