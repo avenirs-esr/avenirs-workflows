@@ -211,7 +211,7 @@ function getFieldsForProject(issueNode, projectNumber){
     const cofolio = getFieldsForProject(c, 16);
     const row = {
       profile: parseProfile(labels) || '—',
-      us: escapeCell(c.title),
+      us: c.url ? `[${escapeCell(c.title)}](${c.url})` : escapeCell(c.title),
       sprint: cofolio.sprint || '—',
       etat: statusToDot(cofolio.status),
       maj: (improvementsByBase.get(c.number) || []).join(' ; ')
@@ -231,7 +231,10 @@ function getFieldsForProject(issueNode, projectNumber){
   for (const [key, arr] of groups) {
     const epNum = key === 'none' ? null : Number(key);
     const epTitle = epNum ? (epicTitleByNum.get(epNum) || `Epic #${epNum}`) : 'Sans Epic';
-    const TITLE = `#### Tableau de fonctionnalités de l'épic : **${escapeCell(epTitle)}**`;
+    const epUrl   = epNum ? epicUrlByNum.get(epNum) : null;
+    const TITLE = `#### Tableau de fonctionnalités de l'épic : **${
+      epUrl ? `[${escapeCell(epTitle)}](${epUrl})` : escapeCell(epTitle)
+    }**`;
     let t = `${TITLE}\n\n${LEGEND}\n\n| Profil | US | Sprint | État | Mise à jour |\n|---|---|:--:|:--:|---|\n`;
     for (const r of arr) t += `| ${r.profile} | ${r.us} | ${r.sprint} | ${r.etat} | ${r.maj} |\n`;
     const name = key === 'none' ? 'epic-none.md' : `epic-${key}.md`;
