@@ -8,24 +8,41 @@ const createMissing = String(process.env.CREATE_MISSING_SECTION || 'true').toLow
 if (!pagePath) throw new Error('WIKI_PAGE is required');
 if (!fs.existsSync(pagePath)) throw new Error(`Wiki page not found: ${pagePath}`);
 
-let files = [];
 const regex = /^epic-(\d+)\.md$/i;
+let files = [];
 if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
   files = fs.readdirSync(dir).flatMap(f => {
     const m = f.match(regex);
-    return m ? [{ file: f, num: Number(m[1]) }] : [];
-  });
-  files.sort((a, b) => a.num - b.num);
+    if (!m) return [];
+    const body = fs.readFileSync(`${dir}/${f}`, 'utf8').replace(/\s+$/, '');
+    return [{ file: f, num: Number(m[1]), body }];
+  }).sort((a, b) => a.num - b.num);
 }
 
 function escapeRegexSpecialChars(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
 
 let page = fs.readFileSync(pagePath,'utf8');
 
-for (const {file,num} of files) {
+{
+  const startAll = `<!-- ${prefix}_START_ALL -->`;
+  const endAll   = `<!-- ${prefix}_END_ALL -->`;
+  const reAll = new RegExp(`${escapeRegexSpecialChars(startAll)}[\\s\\S]*?${escapeRegexSpecialChars(endAll)}`,'g');
+
+  if (reAll.test(page) || createMissing) {
+    const allBody = files.map(x => x.body).join('\n\n');
+    const blockAll = `${startAll}\n${allBody}\n${endAll}`;
+    if (reAll.test(page)) {
+      page = page.replace(reAll, blockAll);
+    } else if (createMissing) {
+      if (!/\n$/.test(page)) page += '\n';
+      page += `\n${blockAll}\n`;
+    }
+  }
+}
+
+for (const {num, body} of files) {
   const start = `<!-- ${prefix}_START_${num} -->`;
   const end   = `<!-- ${prefix}_END_${num} -->`;
-  const body  = fs.readFileSync(`${dir}/${file}`,'utf8').replace(/\s+$/,'');
   const block = `${start}\n${body}\n${end}`;
   const re = new RegExp(`${escapeRegexSpecialChars(start)}[\\s\\S]*?${escapeRegexSpecialChars(end)}`,'g');
   if (re.test(page)) {
