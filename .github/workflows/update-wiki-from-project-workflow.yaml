@@ -11,14 +11,10 @@ on:
       wiki_page:
         required: true
         type: string
-      start_marker:
+      marker_prefix:
         required: false
         type: string
-        default: "<!-- US_TABLE_START -->"
-      end_marker:
-        required: false
-        type: string
-        default: "<!-- US_TABLE_END -->"
+        default: "US_TABLE"
       profile_label:
         required: true
         type: string
@@ -59,25 +55,16 @@ jobs:
           git clone "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki
 
       - name: 🔄️ Replace section in page
-        env:
-          START: ${{ inputs.start_marker }}
-          END:   ${{ inputs.end_marker }}
-          PAGE:  ${{ inputs.wiki_page }}
-        run: |
-          test -f "wiki/$PAGE" || { echo -e "# Page\n\n$START\n$END\n" > "wiki/$PAGE"; }
-          TABLE_CONTENT=$(cat US_TABLE.md)
-          awk -v start="$START" -v end="$END" -v repl="$TABLE_CONTENT" '
-            BEGIN{inblock=0}
-            {
-              if (index($0,start)) { print $0; print repl; inblock=1; next }
-              if (index($0,end))   { inblock=0 }
-              if (!inblock) print $0
-            }' "wiki/$PAGE" > wiki/_tmp.md
-          mv wiki/_tmp.md "wiki/$PAGE"
+        uses: avenirs-esr/avenirs-workflows/.github/actions/wiki-replace-section@main
+        with:
+          marker_prefix: ${{ inputs.marker_prefix }}
+          wiki_page:   wiki/${{ inputs.wiki_page }}
+          tables_dir: epic_tables
+          create_missing_section: "true"
 
       - name: 📤 Commit & push
         working-directory: wiki
         run: |
           git add "${{ inputs.wiki_page }}"
-          git commit -m "chore(wiki): update US table" || echo "No changes"
-          git push
+                git commit -m "chore(wiki): update US table" || echo "No changes"
+                git push
