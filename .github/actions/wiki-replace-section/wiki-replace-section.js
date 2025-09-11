@@ -36,4 +36,18 @@ for (const {file,num} of files) {
   }
 }
 
+const allStart = `<!-- ${prefix}_START_ALL -->`;
+const allEnd   = `<!-- ${prefix}_END_ALL -->`;
+const allBody = files
+  .map(({ num }) => {
+    const content = fs.readFileSync(`${dir}/epic-${num}.md`, 'utf8').replace(/\s+$/, '');
+    return content + '\n\n';
+  })
+  .join('');
+const allBlock = `${allStart}\n${allBody}\n${allEnd}`;
+const allRe = new RegExp(`${escapeRegexSpecialChars(allStart)}[\\s\\S]*?${escapeRegexSpecialChars(allEnd)}`,'g');
+if (allRe.test(page)) {
+  page = page.replace(allRe, allBlock);
+}
+
 fs.writeFileSync(pagePath, page, 'utf8');
