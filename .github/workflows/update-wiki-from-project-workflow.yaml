@@ -55,12 +55,12 @@ jobs:
           git clone "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki
 
       - name: 🔄️ Replace section in page
-        uses: avenirs-esr/avenirs-workflows/.github/actions/wiki-replace-section@feat/522-wiki-automation
+        uses: avenirs-esr/avenirs-workflows/.github/actions/wiki-replace-section@main
         with:
           marker_prefix: ${{ inputs.marker_prefix }}
           wiki_page:   wiki/${{ inputs.wiki_page }}
           tables_dir: epic_tables
-          create_missing_section: "false"
+          create_missing_section: "true"
 
       - name: 📤 Commit & push
         working-directory: wiki
