@@ -12,13 +12,13 @@ let files = [];
 const regex = /^epic-(\d+)\.md$/i;
 if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
   files = fs.readdirSync(dir).flatMap(f => {
-    const m = f.match(regex);
-    return m ? [{ file: f, num: Number(m[1]) }] : [];
+    const matchResult = f.match(regex);
+    return matchResult ? [{ file: f, num: Number(matchResult[1]) }] : [];
   });
   files.sort((a, b) => a.num - b.num);
 }
 
-function escapeRegexSpecialChars(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+function escapeRegexSpecialChars(text){ return text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
 
 let page = fs.readFileSync(pagePath,'utf8');
 
@@ -27,9 +27,9 @@ for (const {file,num} of files) {
   const end   = `<!-- ${prefix}_END_${num} -->`;
   const body  = fs.readFileSync(`${dir}/${file}`,'utf8').replace(/\s+$/,'');
   const block = `${start}\n${body}\n${end}`;
-  const re = new RegExp(`${escapeRegexSpecialChars(start)}[\\s\\S]*?${escapeRegexSpecialChars(end)}`,'g');
-  if (re.test(page)) {
-    page = page.replace(re, block);
+  const regex = new RegExp(`${escapeRegexSpecialChars(start)}[\\s\\S]*?${escapeRegexSpecialChars(end)}`,'g');
+  if (regex.test(page)) {
+    page = page.replace(regex, block);
   } else if (createMissing) {
     if (!/\n$/.test(page)) page += '\n';
     page += `\n${block}\n`;
@@ -45,9 +45,9 @@ const allBody = files
   })
   .join('');
 const allBlock = `${allStart}\n${allBody}\n${allEnd}`;
-const allRe = new RegExp(`${escapeRegexSpecialChars(allStart)}[\\s\\S]*?${escapeRegexSpecialChars(allEnd)}`,'g');
-if (allRe.test(page)) {
-  page = page.replace(allRe, allBlock);
+const allRegex = new RegExp(`${escapeRegexSpecialChars(allStart)}[\\s\\S]*?${escapeRegexSpecialChars(allEnd)}`,'g');
+if (allRegex.test(page)) {
+  page = page.replace(allRegex, allBlock);
 }
 
 fs.writeFileSync(pagePath, page, 'utf8');
