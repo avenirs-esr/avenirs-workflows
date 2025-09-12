@@ -30,5 +30,5 @@ runs:
         WIKI_PAGE:  ${{ inputs.wiki_page }}
         TABLES_DIR: ${{ inputs.tables_dir }}
         PREFIX:     ${{ inputs.marker_prefix }}
-        CREATE_MISS: ${{ inputs.create_missing_section }}
+        CREATE_MISSING_SECTION: ${{ inputs.create_missing_section }}
       run: node "$GITHUB_ACTION_PATH/wiki-replace-section.js"
