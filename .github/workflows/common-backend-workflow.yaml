@@ -34,6 +34,7 @@ jobs:
         with:
           fetch-depth: 1
           ref: ${{ github.head_ref }}
+          submodules: recursive
       - name: 📤 Upload Templates
         uses: avenirs-esr/avenirs-workflows/.github/actions/upload-templates@main
   lint:
