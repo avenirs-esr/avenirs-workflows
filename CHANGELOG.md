@@ -10,6 +10,9 @@ Ce fichier suit tous les changements notables apportés à ce dépôt, selon le 
 - Initialisation du dépôt avec structure pour `actions` et `workflows`.
 
 ---
+## [v1.0.3] - 2025-09-23
+
+- Paramétrage de l'action checkout pour charger les submodules dans le workflow pour le backend.
 
 ## [v1.0.2] - 2025-06-20
 
