@@ -11,6 +11,10 @@ Ce fichier suit tous les changements notables apportés à ce dépôt, selon le 
 
 ---
 
+## [v1.0.3] - 2025-06-20
+
+- Fix: paramétrage de l'action de checkout pour récupérer les sous-modules
+
 ## [v1.0.2] - 2025-06-20
 
 - Mise à jour de Google Java Format à la version 1.27.0.
