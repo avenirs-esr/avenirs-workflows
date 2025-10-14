@@ -1,0 +1,56 @@
+name: Autodeploy to npm (no need to run it)
+
+on:
+  workflow_call:
+
+jobs:
+  publish-to-npm:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [build, typecheck, lint, build]
+        include:
+          - task: build
+            name: 🏗️ Build project
+            cmd: "npm run build-only"
+          - task: typecheck
+            name: 🧠 TypeScript type checking
+            cmd: "npm run type-check"
+          - task: lint
+            name: 🧹 Run ESLint
+            cmd: "npm run lint"
+          - task: build
+            name: 🏗️ Build package
+            cmd: "npm run build"
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Verify tag is on develop
+        run: |
+          TAG_REF=${GITHUB_REF#refs/tags/}
+          COMMIT=$(git rev-list -n 1 $TAG_REF)
+          echo "Tag $TAG_REF points to commit $COMMIT"
+
+          BRANCHES=$(git branch -r --contains $COMMIT | grep 'origin/develop' || true)
+          if [ -z "$BRANCHES" ]; then
+            echo "❌ Tag $TAG_REF is not on develop, skipping publish."
+            exit 1
+          fi
+
+          echo "✅ Tag $TAG_REF is on develop"
+
+      - name: 🔧 Setup Node + install
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@feat/539-frontend-workflows
+
+      - name: ${{ matrix.name }}
+        run: ${{ matrix.cmd }}
+
+      - name: 🚀 Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

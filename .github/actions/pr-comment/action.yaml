@@ -1,0 +1,17 @@
+name: "PR Comment"
+description: "Comment a message on a PR (idempotent by default of the action used)"
+inputs:
+  body:
+    description: "The comment body to post on the PR"
+    required: true
+  pr-number:
+    description: "The PR number to post the comment on"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Comment on PR
+      uses: thollander/actions-comment-pull-request@v3
+      with:
+          message: ${{ inputs.body }}
+          pr-number: ${{ inputs.pr-number }}

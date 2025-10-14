@@ -10,5 +10,5 @@ runs:
         cache: npm
 
     - name: Install dependencies with npm ci
-      run: npm ci
       shell: bash
+      run: npm ci --include=optional

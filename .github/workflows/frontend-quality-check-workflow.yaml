@@ -1,0 +1,39 @@
+name: PR Code Quality Checks
+
+on:
+  workflow_call:
+
+jobs:
+  quality-checks:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [typecheck, lint, tests]
+        include:
+          - task: typecheck
+            name: 🧠 TypeScript type checking
+            cmd: "npm run type-check"
+            envJson: "{}"
+          - task: lint
+            name: 🧹 Run ESLint
+            cmd: "npm run lint"
+            envJson: "{}"
+          - task: tests
+            name: 🧪 Run unit tests with coverage
+            cmd: "npm run test:coverage"
+            envJson: '{"VITE_ENABLE_MSW":"true"}'
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node + install
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@feat/539-frontend-workflows
+
+      - name: 🏗️ Build project
+        run: npm run build-only
+
+      - name: ${{ matrix.name }}
+        run: ${{ matrix.cmd }}
+        env: ${{ fromJSON(matrix.envJson) }}

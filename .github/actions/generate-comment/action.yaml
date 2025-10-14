@@ -1,0 +1,66 @@
+name: "Generate Comment"
+description: "Generate a comment based on a template file and inputs"
+inputs:
+  dsav-template:
+    description: "Boolean to indicate if the DSAV template should be used"
+    required: true
+outputs:
+  comment-body:
+    description: "Rendered PR comment body"
+    value: ${{ steps.generate-dsav.outputs.comment-body || steps.generate-std.outputs.comment-body }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 📝 Generate comment body (DSAV only)
+      if: ${{ inputs.dsav-template == 'true' }}
+      id: generate-dsav
+      shell: bash
+      run: |
+        REPO_FULL=${{ github.repository }}
+        REPO_OWNER=${REPO_FULL%%/*}
+        REPO_NAME=${REPO_FULL#*/}
+        PR_NUMBER=${{ github.event.pull_request.number }}
+        BASE_URL="https://${REPO_OWNER}.github.io/${REPO_NAME}/accessibility-reports/${PR_NUMBER}"
+        COMMENT_BODY="### ♿ Accessibility Report"
+        if [ -d "gh-pages-tmp/" ]; then
+          while IFS= read -r FILE; do
+            FILE=$(basename "$FILE")
+            COMMENT_BODY="${COMMENT_BODY}\n- [${FILE}](${BASE_URL}/${FILE})"
+          done < <(find gh-pages-tmp/ -name "*.html")
+        fi
+        {
+          echo "comment-body<<EOF"
+          echo -e "$COMMENT_BODY"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: 📝 Generate comment body (student/teacher)
+      if: ${{ inputs.dsav-template != 'true' }}
+      id: generate-std
+      shell: bash
+      run: |
+        REPO_FULL=${{ github.repository }}
+        REPO_OWNER=${REPO_FULL%%/*}
+        REPO_NAME=${REPO_FULL#*/}
+        PR_NUMBER=${{ github.event.pull_request.number }}
+        BASE_URL="https://${REPO_OWNER}.github.io/${REPO_NAME}/accessibility-reports/${PR_NUMBER}"
+        COMMENT_BODY="### ♿ Accessibility Report"
+        for DIR in student teacher; do
+          if [ -d "gh-pages-tmp/$DIR" ]; then
+            if [ "$DIR" = "student" ]; then
+              COMMENT_BODY="${COMMENT_BODY}\n\n#### 👨‍🎓 Student universe failed routes reports:"
+            else
+              COMMENT_BODY="${COMMENT_BODY}\n\n#### 👩‍🏫 Teacher universe failed routes reports:"
+            fi
+            while IFS= read -r FILE; do
+              FILE=$(basename "$FILE")
+              COMMENT_BODY="${COMMENT_BODY}\n- [${FILE}](${BASE_URL}/$DIR/${FILE})"
+            done < <(find "gh-pages-tmp/$DIR" -name "*.html")
+          fi
+        done
+        {
+          echo "comment-body<<EOF"
+          echo -e "$COMMENT_BODY"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
