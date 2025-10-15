@@ -6,7 +6,6 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: github.ref_name == 'main' || github.ref_name == 'develop'
     steps:
       - name: 🔑 Generate GitHub App token
         id: app-token
