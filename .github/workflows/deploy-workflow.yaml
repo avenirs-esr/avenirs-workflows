@@ -51,6 +51,8 @@ jobs:
     steps:
       - name: ✅ Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: 🚀 Deploy application on remote server
         uses: avenirs-esr/avenirs-workflows/.github/actions/deploy-on-server@main

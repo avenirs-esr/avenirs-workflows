@@ -1,0 +1,76 @@
+name: Accessibility Check and Deploy
+
+on:
+  workflow_call:
+    inputs:
+      build-command:
+        description: "The npm build command to run"
+        required: false
+        default: "npm run build-only:development"
+        type: string
+      continue-on-error:
+        description: "Whether to continue the workflow if the accessibility tests fail"
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  a11y-test-and-deploy-reports:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.0-noble
+      options: --user 1001
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Node.js 22 with npm cache
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+
+      - name: 🏗️ Build
+        run: ${{ inputs.build-command }}
+        env:
+          VITE_ENABLE_MSW: true
+
+      - name: 👮‍♂️ Run accessibility test
+        id: a11y-test
+        run: |
+          npm run test:a11y
+        continue-on-error: ${{ inputs.continue-on-error }}
+        env:
+          VITE_ENABLE_MSW: true
+
+      - name: ↔️ Move accessibility report to temp folder
+        if: steps.a11y-test.outcome == 'failure'
+        run: |
+          mkdir -p gh-pages-tmp
+          mv a11y/reports/* gh-pages-tmp/
+
+      - name: 🚀 Deploy accessibility report
+        if: steps.a11y-test.outcome == 'failure'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: gh-pages-tmp
+          destination_dir: accessibility-reports/${{ github.event.pull_request.number }}
+          allow_empty_commit: true
+          user_name: github-actions
+          user_email: github-actions@github.com
+
+      - name: 📝 Generate comment body
+        if: steps.a11y-test.outcome == 'failure'
+        id: generate-comment
+        uses: avenirs-esr/avenirs-workflows/.github/actions/generate-comment@main
+        with:
+          dsav-template: ${{ contains(github.repository, 'dsav') }}
+
+      - name: 💬 Comment on PR with dynamic report URLs
+        if: steps.a11y-test.outcome == 'failure'
+        uses: avenirs-esr/avenirs-workflows/.github/actions/pr-comment@main
+        with:
+          body: ${{ steps.generate-comment.outputs.comment-body }}
+          pr-number: ${{ github.event.pull_request.number }}
+
+      - name: ✅ Check if accessibility tests passed
+        if: steps.a11y-test.outcome == 'failure'
+        run: exit 1

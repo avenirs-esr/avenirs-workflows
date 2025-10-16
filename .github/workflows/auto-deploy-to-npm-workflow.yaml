@@ -1,0 +1,47 @@
+name: Autodeploy to npm (no need to run it)
+
+on:
+  workflow_call:
+
+jobs:
+  publish-to-npm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Verify tag is on develop
+        run: |
+          TAG_REF=${GITHUB_REF#refs/tags/}
+          COMMIT=$(git rev-list -n 1 "$TAG_REF")
+          echo "Tag $TAG_REF points to commit $COMMIT"
+
+          BRANCHES=$(git branch -r --contains $COMMIT | grep 'origin/develop' || true)
+          if [ -z "$BRANCHES" ]; then
+            echo "❌ Tag $TAG_REF is not on develop, skipping publish."
+            exit 1
+          fi
+
+          echo "✅ Tag $TAG_REF is on develop"
+
+      - name: 🔧 Setup Node + install
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+
+      - name: 🏗️ Build project
+        run: npm run build-only
+
+      - name: 🧪 Run checks in parallel (typecheck + lint + build)
+        shell: bash
+        run: |
+          set -euo pipefail
+          (npm run type-check) & pid1=$!
+          (npm run lint)       & pid2=$!
+          (npm run build)      & pid3=$!
+          code=0
+          for p in $pid1 $pid2 $pid3; do
+            if ! wait "$p"; then code=1; fi
+          done
+          exit $code
+
+      - name: 🚀 Publish to npm
+        run: npm publish

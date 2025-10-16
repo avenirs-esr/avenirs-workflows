@@ -1,0 +1,39 @@
+name: Release new version to npm
+
+on:
+  workflow_call:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'main' || github.ref_name == 'develop'
+    steps:
+      - name: 🔑 Generate GitHub App token
+        id: app-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.DSAV_GH_APP_ID }}
+          private_key: ${{ secrets.DSAV_GH_APP_PRIVATE_KEY }}
+
+      - name: ⬇️ Checkout repo with App token
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: 🔧 Setup Node + install
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+
+      - name: 🖊️ Configure Git user
+        run: |
+          git config --global user.name  "avenirs-dsav-bot[bot]"
+          git config --global user.email "avenirs-dsav-bot[bot]@users.noreply.github.com"
+
+      - name: 🚀 Run release
+        run: npm run release:${{ github.event.inputs.bump }}
+
+      - name: ⬆️ Push tags and commits
+        env:
+          GIT_TOKEN: ${{ secrets.DSAV_BOT_TOKEN }}
+        run: |
+          git remote set-url origin https://x-access-token:${GIT_TOKEN}@github.com/${{ github.repository }}
+          git push origin HEAD --follow-tags
