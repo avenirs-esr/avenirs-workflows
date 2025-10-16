@@ -25,7 +25,7 @@ jobs:
           echo "✅ Tag $TAG_REF is on develop"
 
       - name: 🔧 Setup Node + install
-        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@feat/539-frontend-workflows
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
 
       - name: 🏗️ Build project
         run: npm run build-only

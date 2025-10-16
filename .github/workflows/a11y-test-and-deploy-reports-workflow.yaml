@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔧 Set up Node.js 22 with npm cache
-        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@feat/539-frontend-workflows
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
 
       - name: 🏗️ Build
         run: ${{ inputs.build-command }}
@@ -60,13 +60,13 @@ jobs:
       - name: 📝 Generate comment body
         if: steps.a11y-test.outcome == 'failure'
         id: generate-comment
-        uses: avenirs-esr/avenirs-workflows/.github/actions/generate-comment@feat/539-frontend-workflows
+        uses: avenirs-esr/avenirs-workflows/.github/actions/generate-comment@main
         with:
           dsav-template: ${{ contains(github.repository, 'dsav') }}
 
       - name: 💬 Comment on PR with dynamic report URLs
         if: steps.a11y-test.outcome == 'failure'
-        uses: avenirs-esr/avenirs-workflows/.github/actions/pr-comment@feat/539-frontend-workflows
+        uses: avenirs-esr/avenirs-workflows/.github/actions/pr-comment@main
         with:
           body: ${{ steps.generate-comment.outputs.comment-body }}
           pr-number: ${{ github.event.pull_request.number }}
