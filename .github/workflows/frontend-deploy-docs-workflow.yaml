@@ -1,0 +1,34 @@
+name: frontend-deploy-docs-workflow.yaml
+on:
+  workflow_call:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Node.js 22 with npm cache
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+
+      - name: 🏗️ Build VitePress docs
+        run: npm run docs:build
+
+      - name: 🏗️ Build Storybook
+        run: npm run storybook:build
+
+      - name: 📂 Copy Storybook into docs output
+        run: |
+          rm -rf docs/.vitepress/dist/storybook
+          mkdir -p docs/.vitepress/dist/storybook
+          cp -r storybook-static/* docs/.vitepress/dist/storybook/
+
+      - name: 🚀 Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/.vitepress/dist
+          user_name: github-actions
+          user_email: github-actions@users.noreply.github.com
+
