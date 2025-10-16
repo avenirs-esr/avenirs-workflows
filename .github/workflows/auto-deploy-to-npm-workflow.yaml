@@ -15,6 +15,13 @@ jobs:
           TAG_REF=${GITHUB_REF#refs/tags/}
           COMMIT=$(git rev-list -n 1 "$TAG_REF")
           echo "Tag $TAG_REF points to commit $COMMIT"
+
+          BRANCHES=$(git branch -r --contains $COMMIT | grep 'origin/develop' || true)
+          if [ -z "$BRANCHES" ]; then
+            echo "❌ Tag $TAG_REF is not on develop, skipping publish."
+            exit 1
+          fi
+
           echo "✅ Tag $TAG_REF is on develop"
 
       - name: 🔧 Setup Node + install
