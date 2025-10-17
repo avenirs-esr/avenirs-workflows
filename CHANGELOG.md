@@ -10,6 +10,11 @@ Ce fichier suit tous les changements notables apportés à ce dépôt, selon le 
 - Initialisation du dépôt avec structure pour `actions` et `workflows`.
 
 ---
+
+## [v1.0.4] - 2025-10-17
+
+- Ajout de la variable d'environnement pour JASYPT dans le workflow backend.
+
 ## [v1.0.3] - 2025-09-23
 
 - Paramétrage de l'action checkout pour charger les submodules dans le workflow pour le backend.
