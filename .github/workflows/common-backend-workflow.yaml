@@ -96,6 +96,8 @@ jobs:
         run: chmod +x ./mvnw
       - name: 🧪 Run tests and generate coverage report
         uses: avenirs-esr/avenirs-workflows/.github/actions/tests-and-code-coverage@main
+        env:
+          JASYPT_ENCRYPTOR_PASSWORD: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
         with:
           ignore_ssl_verification: "true"
           import_certificate_from_localhost: "false"
