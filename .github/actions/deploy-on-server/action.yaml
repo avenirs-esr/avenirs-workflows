@@ -38,56 +38,85 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: 🛠️ Update config
+    - name: 🛠️ Update config with logs
       if: ${{ inputs.tag_name != '' || inputs.resolved_pairs != '' }}
       shell: bash
+      env:
+        CONF_DIR: ${{ inputs.conf_path }}
+        CONF_FILE: ${{ inputs.conf_file }}
+        SRV_BASE_PATH: ${{ inputs.srv_base_path }}
+        RESOLVED_PAIRS: ${{ inputs.resolved_pairs }}
+        TAG_NAME: ${{ inputs.tag_name }}
       run: |
-        CONF_DIR='${{ inputs.conf_path }}'
-        CONF_FILE='${{ inputs.conf_file }}'
-        SRV_BASE_PATH='${{ inputs.srv_base_path }}'
-        TAG_NAME='${{ inputs.tag_name }}'
-
-        cd "$SRV_BASE_PATH" || exit 10
-        [ -n "$CONF_FILE" ] || exit 0
-        CONF_PATH="$CONF_FILE"
-        [ -n "$CONF_DIR" ] && CONF_PATH="$CONF_DIR/$CONF_FILE"
-        [ -f "$CONF_PATH" ] || { echo "::warning::Config not found: $CONF_PATH"; exit 0; }
-
-        PAIRS_STR="$(printf %s "${{ inputs.resolved_pairs }}")"
-        if [ -n "$PAIRS_STR" ]; then
-          while IFS='=' read -r repo tag; do
-            [ -z "${repo:-}" ] && continue
-            [ -z "${tag:-}" ] && continue
-            esc_tag=$(printf '%s\n' "$tag" | sed 's/[\/&]/\\&/g')
-            key="services/avenirs-portfolio/${repo}"
-            sed -i -E "s|^([[:space:]]*)${key}([[:space:]]*)=([[:space:]]*).*$|\1${key} = ${esc_tag}|" "$CONF_PATH"
-            grep -E "^ *${key} *=" "$CONF_PATH" || true
-          done <<'EOF'
-              ${{ inputs.resolved_pairs }}
-          EOF
-        elif [ -n "$TAG_NAME" ]; then
-          esc_tag=$(printf '%s\n' "$TAG_NAME" | sed 's/[\/&]/\\&/g')
-          keys=(
-            'services/avenirs-portfolio/avenirs-cofolio-client'
-            'services/avenirs-portfolio/avenirs-portfolio-api'
-          )
-          for k in "${keys[@]}"; do
-            sed -i -E "s|^([[:space:]]*)${k}([[:space:]]*)=([[:space:]]*).*$|\1${k} = ${esc_tag}|" "$CONF_PATH"
-            grep -E "^ *${k} *=" "$CONF_PATH" || true
-          done
+        set -euo pipefail
+        if [ -z "${CONF_FILE:-}" ]; then
+          echo "::warning::CONF_FILE not provided, skipping update."
+          exit 0
         fi
+
+        CONF_PATH="$CONF_FILE"
+        if [ -n "${CONF_DIR:-}" ]; then
+          CONF_PATH="$CONF_DIR/$CONF_FILE"
+        fi
+
+        if [ ! -f "$CONF_PATH" ]; then
+          echo "::warning::Config file not found: $CONF_PATH — nothing to update."
+          exit 0
+        fi
+
+        echo "::group::🧩 Process resolved_pairs"
+        PAIRS_STR="$(printf %s "$RESOLVED_PAIRS")"
+        if [ -z "$PAIRS_STR" ]; then
+          echo "::warning::RESOLVED_PAIRS is empty. Skipping update."
+          exit 0
+        fi
+
+        echo "➡️ Starting replacements for each repo=tag pair..."
+
+        while IFS='=' read -r repo tag; do
+          repo="${repo//$'\r'/}"
+          tag="${tag//$'\r'/}"
+          if [ -z "${repo:-}" ] || [ -z "${tag:-}" ]; then
+            echo "⚠️  Skipping empty line or invalid pair: '$repo' = '$tag'"
+            continue
+          fi
+
+          echo "--------------------------------------------------"
+          echo "🔸 Processing: repo='$repo', tag='$tag'"
+
+          esc_tag=$(printf '%s\n' "$tag" | sed 's/[\/&]/\\&/g')
+          key="services/avenirs-portfolio/${repo}"
+          echo "  ➜ Target key: $key"
+
+          grep -E "^ *${key} *=" "$CONF_PATH" && echo "  (Found line to update)" || echo "  (Key not found, will not update)"
+
+          sed -i -E "s|^([[:space:]]*)${key}([[:space:]]*)=([[:space:]]*).*$|\1${key} = ${esc_tag}|" "$CONF_PATH"
+
+          if grep -qE "^ *${key} *= *${esc_tag}" "$CONF_PATH"; then
+            echo "✅ Updated: ${key} = ${esc_tag}"
+          elif grep -qE "^ *${key} *=" "$CONF_PATH"; then
+            echo "⚠️  Found key but value unchanged (possible sed regex mismatch)"
+          else
+            echo "❌ Key not found: ${key}"
+          fi
+        done <<< "$RESOLVED_PAIRS"
+
+        echo "🧾 Final content of $CONF_PATH (for debug):"
+        echo "----------------------------------------"
+        cat "$CONF_PATH" | sed 's/^/  /'
+        echo "----------------------------------------"
 
 
     - name: 🚀 Run local deploy command
       shell: bash
+      env:
+        SRV_BASE_PATH: ${{ inputs.srv_base_path }}
+        SRV_DEPLOY_CMD: ${{ inputs.srv_deploy_cmd }}
+        SRV_UPDATE_DEPLOYMENT_CMD: ${{ inputs.srv_update_deployment_cmd }}
+        JAVA_VERSION: ${{ inputs.java_version }}
+        MAVEN_VERSION: ${{ inputs.maven_version }}
+        JASYPT: ${{ inputs.jasypt_encryptor_password }}
       run: |
-        SRV_BASE_PATH='${{ inputs.srv_base_path }}'
-        SRV_DEPLOY_CMD='${{ inputs.srv_deploy_cmd }}'
-        SRV_UPDATE_DEPLOYMENT_CMD='${{ inputs.srv_update_deployment_cmd }}'
-        JAVA_VERSION='${{ inputs.java_version }}'
-        MAVEN_VERSION='${{ inputs.maven_version }}'
-        JASYPT='${{ inputs.jasypt_encryptor_password }}'
-
         export SDKMAN_DIR="$HOME/.sdkman"
         [ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ] && . "$SDKMAN_DIR/bin/sdkman-init.sh"
         export JAVA_HOME="$(sdk home java "$JAVA_VERSION")"

@@ -6,9 +6,6 @@ inputs:
     description: "Tag to validate (falls back to github.ref_name if empty)"
     required: false
     default: ""
-  repos:
-    description: "Newline-separated list of owner/repo to check (e.g., avenirs-esr/avenirs-portfolio-api)"
-    required: true
   qa_suffix:
     description: "Suffix that indicates QA"
     required: false
@@ -148,7 +145,7 @@ runs:
     - name: ✅ Verify repo tags exist (from config)
       shell: bash
       env:
-        REPO_LIST: ${{ inputs.repos }}
+        REPO_LIST: ${{ steps.build-map.outputs.resolved_pairs }}
         TOKEN: ${{ steps.app-token.outputs.app-token }}
       run: |
         set -euo pipefail
@@ -162,7 +159,7 @@ runs:
           awk -F'=' -v r="$short" '$1==r {print $2}' "$ENV_TAGS_FILE" | tr -d '[:space:]'
         }
 
-        while IFS= read -r repo; do
+        while IFS='=' read -r repo tag; do
           [ -z "${repo:-}" ] && continue
           if [[ "$repo" != */* ]]; then full="${GITHUB_REPOSITORY_OWNER}/${repo}"; short="$repo"; else full="$repo"; short="${repo##*/}"; fi
 
