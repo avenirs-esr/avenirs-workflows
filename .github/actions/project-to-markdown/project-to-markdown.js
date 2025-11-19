@@ -107,6 +107,7 @@ const labelNames = n => (n?.labels?.nodes ?? []).map(x => x.name);
 const epicWantedSet = new Set(String(epicLabel).split(',').map(s=>norm(s.trim())).filter(Boolean));
 const escapeCell = s => String(s??'').replace(/\|/g,'\\|');
 const doneDot = '✅';
+const inRecetteDot = '🏁';
 const inProgressDot = '⏳';
 const todoDot = '📝';
 const wontDot = '❌';
@@ -132,8 +133,9 @@ function statusToDot(name){
     .trim();
 
   if (/(^|\b)(done)(\b|$)/.test(normalizedName)) return doneDot;
+  if (/(^|\b)(recette)(\b|$)/.test(normalizedName)) return inRecetteDot;
   if (/(^|\b)(wont do)(\b|$)/.test(normalizedName)) return wontDot;
-  if (/(^|\b)(in progress|in review|recette)(\b|$)/.test(normalizedName)) return inProgressDot;
+  if (/(^|\b)(in progress|in review)(\b|$)/.test(normalizedName)) return inProgressDot;
   return todoDot;
 }
 
@@ -209,6 +211,16 @@ function getFieldsForProject(issueNode, projectNumber){
     }
 
     const cofolio = getFieldsForProject(content, 16);
+    const normalizedStatus = String(cofolio.status ?? '')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[_\-’'.,:;()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (normalizedStatus === '' || /(^|\b)(backlog not ready|a refiner)(\b|$)/.test(normalizedStatus)) {
+      continue;
+    }
     const row = {
       profile: parseProfile(labels) || '—',
       us: content.url ? `[${escapeCell(content.title)}](${content.url})` : escapeCell(content.title),
@@ -227,7 +239,7 @@ function getFieldsForProject(issueNode, projectNumber){
   }
 
   fs.mkdirSync('epic_tables', { recursive: true });
-  const LEGEND = `*Légende :* ${doneDot} Terminé · ${inProgressDot} En cours/Review/Recette · ${todoDot} À faire · ${wontDot} Won’t do`;
+  const LEGEND = `*Légende :* ${doneDot} Terminé · ${inRecetteDot} En Recette · ${inProgressDot} En cours/Review · ${todoDot} À faire · ${wontDot} Won’t do`;
   for (const [key, arr] of groups) {
     const epicNum = key === 'none' ? null : Number(key);
     const epicTitle = epicNum ? (epicTitleByNum.get(epicNum) || `Epic #${epicNum}`) : 'Sans Epic';
