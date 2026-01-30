@@ -6,34 +6,54 @@ on:
         required: false
         type: string
         default: ""
+      env_name:
+        required: false
+        type: string
+        default: ""
 
 jobs:
   select-server:
     runs-on: ubuntu-latest
     outputs:
-      target_env:   ${{ steps.default-env.outputs.target_env || steps.set-env.outputs.target_env }}
+      target_env: ${{ steps.env-override.outputs.target_env || steps.default-env.outputs.target_env || steps.set-env.outputs.target_env }}
       resolved_pairs: ${{ steps.set-env.outputs.resolved_pairs }}
     permissions:
       contents: read
 
     steps:
+      - id: env-override
+        name: 🎯 Env override (inputs.env_name)
+        if: ${{ inputs.env_name != '' }}
+        shell: bash
+        run: |
+          env_name="${{ inputs.env_name }}"
+          case "$env_name" in
+            dev)    echo "target_env=srv-dev" >> "$GITHUB_OUTPUT" ;;
+            qualif) echo "target_env=srv-qualif" >> "$GITHUB_OUTPUT" ;;
+            recette) echo "target_env=srv-recette" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error::Invalid env_name='$env_name'. Allowed: dev|qualif|recette"
+              exit 1
+              ;;
+          esac
+
       - id: default-env
         name: 🧩 Default env (no tag) -> srv-dev
-        if: ${{ inputs.tag_name == '' }}
+        if: ${{ inputs.tag_name == '' && inputs.env_name == '' }}
         shell: bash
         run: echo "target_env=srv-dev" >> "$GITHUB_OUTPUT"
 
       - id: set-env
         name: 🛠️ Set env & verify tags (from config)
-        if: ${{ inputs.tag_name != '' }}
+        if: ${{ inputs.tag_name != '' && inputs.env_name == '' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/verify-prerelease-and-tags@main
         with:
-          tag_name:        ${{ inputs.tag_name }}
-          app_id:          ${{ secrets.GH_APP_ID }}
+          tag_name: ${{ inputs.tag_name }}
+          app_id: ${{ secrets.GH_APP_ID }}
           app_private_key: ${{ secrets.GH_APP_TOKEN }}
-          config_repo:     ${{ secrets.GH_CONFIG_REPO }}
-          config_ref:      ${{ vars.GH_CONFIG_REF }}
-          config_path:     ${{ secrets.GH_CONFIG_PATH }}
+          config_repo: ${{ secrets.GH_CONFIG_REPO }}
+          config_ref: ${{ vars.GH_CONFIG_REF }}
+          config_path: ${{ secrets.GH_CONFIG_PATH }}
 
   deploy:
     needs: select-server
