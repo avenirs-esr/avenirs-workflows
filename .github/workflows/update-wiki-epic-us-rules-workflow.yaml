@@ -1,0 +1,65 @@
+name: "Update Epic/US/Rules report in Wiki"
+on:
+  workflow_call:
+    inputs:
+      org:
+        required: true
+        type: string
+        description: "Organization name (ex: avenirs-esr)"
+      project_number:
+        required: true
+        type: string
+        description: "Project number (ex: 16)"
+      wiki_page:
+        required: true
+        type: string
+        description: "Wiki page name (ex: Epic-US-Rules-Report.md)"
+      epic_label:
+        required: true
+        type: string
+        description: "Epic label (ex: Epic)"
+      us_label:
+        required: true
+        type: string
+        description: "User Story label (ex: Story, User Story)"
+
+jobs:
+  generate-and-update:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔐 GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.WIKI_APP_ID }}
+          app_private_key: ${{ secrets.WIKI_APP_TOKEN }}
+          owner: ${{ inputs.org }}
+
+      - name: 🔍 Iterate Epic and US
+        id: iterate
+        uses: avenirs-esr/avenirs-workflows/.github/actions/iterate-project-items@main
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          org: ${{ inputs.org }}
+          project_number: ${{ inputs.project_number }}
+          epic_label: ${{ inputs.epic_label }}
+          us_label: ${{ inputs.us_label }}
+          output_format: json
+
+      - name: 📝 Generate Epic/US/Rules Wiki Markdown
+        uses: avenirs-esr/avenirs-workflows/.github/actions/generate-epic-us-rules-wiki@main
+        with:
+          json_file: project-items.json
+          output_file: epic-us-rules-report.md
+
+      - name: 📝 Update wiki
+        uses: avenirs-esr/avenirs-workflows/.github/actions/wiki-update@main
+        with:
+          mode: full
+          token: ${{ steps.app.outputs.app-token }}
+          app_slug: ${{ steps.app.outputs.app-slug || 'avenirs-wiki-bot' }}
+          wiki_page: ${{ inputs.wiki_page }}
+          source_file: epic-us-rules-report.md
+          commit_message: "chore(wiki): update Epic/US/Rules report"
