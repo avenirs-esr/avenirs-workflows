@@ -229,7 +229,7 @@ function getFieldsForProject(issueNode, projectNumber) {
     if (!isUS) continue;
 
     // Determine parent Epic
-    const epicEnum = content.parent?.number ? content.parent.number : childToEpicNumber.get(content.url) || null
+    const epicNum = content.parent?.number ? content.parent.number : childToEpicNumber.get(content.url) || null
 
     const usData = {
       number: content.number,
