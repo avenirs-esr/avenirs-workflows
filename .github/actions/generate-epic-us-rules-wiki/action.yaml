@@ -1,0 +1,115 @@
+name: "Generate Epic/US/Rules Wiki Report"
+description: "Generate Wiki markdown report from project items JSON"
+inputs:
+  json_file:
+    description: "Input JSON file with project items"
+    required: false
+    default: "project-items.json"
+  output_file:
+    description: "Output markdown file"
+    required: false
+    default: "epic-us-rules-report.md"
+
+runs:
+  using: "composite"
+  steps:
+    - name: 📝 Generate Epic/US/Rules Wiki Markdown
+      shell: bash
+      run: |
+        echo "📝 Generating Epic/US/Rules Wiki page..."
+
+        cat > ${{ inputs.output_file }} << 'EOFMD'
+        # Rapport Epic, User Stories et Règles de Gestion
+
+        EOFMD
+
+        echo "*Généré automatiquement le $(date '+%d/%m/%Y à %H:%M:%S')*" >> ${{ inputs.output_file }}
+
+        # Add statistics
+        echo "" >> ${{ inputs.output_file }}
+        echo "## 📈 Statistiques" >> ${{ inputs.output_file }}
+        echo "" >> ${{ inputs.output_file }}
+        jq -r '.stats | to_entries[] | "- **\(.key):** \(.value)"' ${{ inputs.json_file }} >> ${{ inputs.output_file }}
+
+        # Process each Epic
+        echo "" >> ${{ inputs.output_file }}
+        echo "## 🚀 Epics et User Stories" >> ${{ inputs.output_file }}
+
+        epic_count=$(jq '.epics | length' ${{ inputs.json_file }})
+
+        for i in $(seq 0 $((epic_count - 1))); do
+          epic_num=$(jq -r ".epics[$i].number" ${{ inputs.json_file }})
+          epic_title=$(jq -r ".epics[$i].title" ${{ inputs.json_file }})
+          epic_url=$(jq -r ".epics[$i].url" ${{ inputs.json_file }})
+          epic_state=$(jq -r ".epics[$i].state" ${{ inputs.json_file }})
+          rules_count=$(jq -r ".epics[$i].rules | length" ${{ inputs.json_file }})
+          us_count=$(jq -r ".epics[$i].subIssues | length" ${{ inputs.json_file }})
+
+          echo "" >> ${{ inputs.output_file }}
+          echo "### ✨ Epic [#${epic_num}](${epic_url}): ${epic_title}" >> ${{ inputs.output_file }}
+          echo "" >> ${{ inputs.output_file }}
+          echo "**État:** ${epic_state} | **User Stories:** ${us_count} | **Règles de gestion:** ${rules_count}" >> ${{ inputs.output_file }}
+
+          # Add rules if any
+          if [ "$rules_count" -gt 0 ]; then
+            echo "" >> ${{ inputs.output_file }}
+            echo "#### 🔍️ Règles de gestion" >> ${{ inputs.output_file }}
+            echo "" >> ${{ inputs.output_file }}
+            jq -r ".epics[$i].rules[] | \"- \(.)\"" ${{ inputs.json_file }} >> ${{ inputs.output_file }}
+          fi
+
+          # Add User Stories
+          if [ "$us_count" -gt 0 ]; then
+            echo "" >> ${{ inputs.output_file }}
+            echo "#### ⚡️ User Stories" >> ${{ inputs.output_file }}
+            echo "" >> ${{ inputs.output_file }}
+
+            for j in $(seq 0 $((us_count - 1))); do
+              us_num=$(jq -r ".epics[$i].subIssues[$j].number" ${{ inputs.json_file }})
+              us_title=$(jq -r ".epics[$i].subIssues[$j].title" ${{ inputs.json_file }})
+              us_url=$(jq -r ".epics[$i].subIssues[$j].url" ${{ inputs.json_file }})
+              us_state=$(jq -r ".epics[$i].subIssues[$j].state" ${{ inputs.json_file }})
+              us_status=$(jq -r ".epics[$i].subIssues[$j].fields.status // \"N/A\"" ${{ inputs.json_file }})
+              us_rules_count=$(jq -r ".epics[$i].subIssues[$j].rules | length" ${{ inputs.json_file }})
+
+              echo "- [#${us_num}](${us_url}): ${us_title} - *${us_status}* (${us_state})" >> ${{ inputs.output_file }}
+
+              # Add US rules if any
+              if [ "$us_rules_count" -gt 0 ]; then
+                echo "  - **🔍️ Règles de gestion:**" >> ${{ inputs.output_file }}
+                jq -r ".epics[$i].subIssues[$j].rules[] | \"    - \(.)\"" ${{ inputs.json_file }} >> ${{ inputs.output_file }}
+              fi
+            done
+          fi
+        done
+
+        # Add orphan US
+        orphan_count=$(jq '.orphanUserStories | length' ${{ inputs.json_file }})
+        if [ "$orphan_count" -gt 0 ]; then
+          echo "" >> ${{ inputs.output_file }}
+          echo "## ❓ User Stories sans Epic" >> ${{ inputs.output_file }}
+          echo "" >> ${{ inputs.output_file }}
+
+          for i in $(seq 0 $((orphan_count - 1))); do
+            us_num=$(jq -r ".orphanUserStories[$i].number" ${{ inputs.json_file }})
+            us_title=$(jq -r ".orphanUserStories[$i].title" ${{ inputs.json_file }})
+            us_url=$(jq -r ".orphanUserStories[$i].url" ${{ inputs.json_file }})
+            us_state=$(jq -r ".orphanUserStories[$i].state" ${{ inputs.json_file }})
+            us_status=$(jq -r ".orphanUserStories[$i].fields.status // \"N/A\"" ${{ inputs.json_file }})
+            us_rules_count=$(jq -r ".orphanUserStories[$i].rules | length" ${{ inputs.json_file }})
+
+            echo "- [#${us_num}](${us_url}): ${us_title} - *${us_status}* (${us_state})" >> ${{ inputs.output_file }}
+
+            # Add orphan US rules if any
+            if [ "$us_rules_count" -gt 0 ]; then
+              echo "  - **🔍️ Règles de gestion:**" >> ${{ inputs.output_file }}
+              jq -r ".orphanUserStories[$i].rules[] | \"    - \(.)\"" ${{ inputs.json_file }} >> ${{ inputs.output_file }}
+            fi
+          done
+        fi
+
+        echo "" >> ${{ inputs.output_file }}
+        echo "---" >> ${{ inputs.output_file }}
+        echo "*Ce rapport est généré automatiquement par le workflow GitHub Actions.*" >> ${{ inputs.output_file }}
+
+        echo "✅ Wiki page generated: ${{ inputs.output_file }}"
