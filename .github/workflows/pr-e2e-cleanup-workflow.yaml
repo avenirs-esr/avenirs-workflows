@@ -1,0 +1,31 @@
+name: PR E2E Cleanup Workflow
+
+on:
+  workflow_call:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ✅ Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: 🗑️ Remove e2e report from GitHub Pages
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          REPORT_DIR="e2e-reports/${PR_NUMBER}"
+
+          if [ -d "$REPORT_DIR" ]; then
+            echo "Removing $REPORT_DIR..."
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git rm -rf "$REPORT_DIR"
+            git commit -m "chore: remove e2e report for PR #${PR_NUMBER}"
+            git push origin gh-pages
+            echo "✅ Report removed successfully"
+          else
+            echo "⚠️ Report directory $REPORT_DIR not found, skipping"
+          fi

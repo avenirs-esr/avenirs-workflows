@@ -1,0 +1,89 @@
+name: PR E2E Frontend Workflow
+
+on:
+  workflow_call:
+    inputs:
+      base_url:
+        type: string
+        default: 'http://localhost:4173/cofolio/'
+        description: Base URL for e2e tests
+      run_local_preview:
+        type: boolean
+        default: false
+        description: Build and run local preview server before e2e tests
+      enable_msw:
+        type: boolean
+        default: false
+        description: Enable MSW mocking
+      deploy_to_gh_pages:
+        type: boolean
+        default: true
+        description: Deploy Playwright report to GitHub Pages
+      chrome_only:
+        type: boolean
+        default: false
+        description: Run e2e tests only on Chrome (faster)
+      review_mode:
+        type: boolean
+        default: true
+        description: Enable review mode to skip tests for features hidden in demo mode
+
+jobs:
+  pr-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ✅ Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.head_ref }}
+
+      - name: 🔧 Setup Node.js
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+
+      - name: 🎭 Run E2E Tests
+        id: e2e
+        uses: avenirs-esr/avenirs-workflows/.github/actions/run-e2e-tests@main
+        with:
+          base_url: ${{ inputs.base_url }}
+          run_local_preview: ${{ inputs.run_local_preview }}
+          enable_msw: ${{ inputs.enable_msw }}
+          upload_report: ${{ inputs.deploy_to_gh_pages }}
+          chrome_only: ${{ inputs.chrome_only }}
+          review_mode: ${{ inputs.review_mode }}
+
+      - name: 📥 Download Playwright Report
+        if: ${{ failure() && inputs.deploy_to_gh_pages }}
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+
+      - name: 🚀 Deploy report to GitHub Pages
+        if: ${{ failure() && inputs.deploy_to_gh_pages }}
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: playwright-report
+          destination_dir: e2e-reports/${{ github.event.pull_request.number }}
+          allow_empty_commit: true
+          user_name: github-actions
+          user_email: github-actions@github.com
+
+      - name: 💬 Comment on PR
+        if: ${{ failure() }}
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          message: |
+            ## ❌ E2E Tests Failed
+
+            The end-to-end tests have failed for this PR.
+            ${{ inputs.deploy_to_gh_pages && format('
+            📊 **[View Playwright Report](https://{0}.github.io/{1}/e2e-reports/{2}/)**', github.repository_owner, github.event.repository.name, github.event.pull_request.number) || '' }}
+            ${{ inputs.deploy_to_gh_pages && format('
+            <details>
+            <summary>📦 Alternative: Download artifact</summary>
+
+            You can also download the `playwright-report` artifact from the [workflow run]({0}/{1}/actions/runs/{2}#artifacts) and run `npx playwright show-report` locally.
+            </details>', github.server_url, github.repository, github.run_id) || '' }}
