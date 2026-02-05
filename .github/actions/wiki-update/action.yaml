@@ -1,0 +1,52 @@
+name: "Wiki Update"
+description: "Clone wiki, update page, commit and push changes"
+inputs:
+  token:
+    description: "GitHub token for authentication"
+    required: false
+  app_slug:
+    description: "App slug for git config"
+    required: false
+    default: "avenirs-wiki-bot"
+  wiki_page:
+    description: "Wiki page name to update (e.g., Epic-US-Rules-Report.md)"
+    required: true
+  source_file:
+    description: "Source file to copy to wiki page (optional)"
+    required: false
+  commit_message:
+    description: "Commit message"
+    required: false
+  mode:
+    description: "Mode: 'full' (clone+update+commit), 'clone-only', 'commit-only'"
+    required: false
+    default: "full"
+
+runs:
+  using: "composite"
+  steps:
+    - name: 📥 Clone wiki
+      if: inputs.mode == 'full' || inputs.mode == 'clone-only'
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+      run: |
+        git config --global user.name "${{ inputs.app_slug }}[bot]"
+        git config --global user.email "${{ inputs.app_slug }}[bot]@users.noreply.github.com"
+        git clone "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki
+
+    - name: 📄 Update wiki page
+      if: (inputs.mode == 'full') && (inputs.source_file != '')
+      shell: bash
+      run: |
+        cp "${{ inputs.source_file }}" "wiki/${{ inputs.wiki_page }}"
+        echo "✅ Wiki page copied to wiki/${{ inputs.wiki_page }}"
+
+    - name: 📤 Commit & push
+      if: inputs.mode == 'full' || inputs.mode == 'commit-only'
+      shell: bash
+      working-directory: wiki
+      run: |
+        git add "${{ inputs.wiki_page }}"
+        git commit -m "${{ inputs.commit_message }}" || echo "No changes"
+        git push

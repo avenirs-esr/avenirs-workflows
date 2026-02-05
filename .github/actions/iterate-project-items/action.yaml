@@ -1,0 +1,47 @@
+name: "Iterate Project Items"
+description: "Iterate through all Epics and User Stories from a GitHub Project"
+inputs:
+  token:
+    required: true
+    description: "GitHub App installation token"
+  org:
+    required: true
+    description: "Organization name"
+  project_number:
+    required: true
+    description: "Project number (not ID)"
+  epic_label:
+    required: true
+    description: "Epic label to identify epics. Ex: 'Type: Epic'"
+  us_label:
+    required: true
+    description: "User Story label to identify user stories. Ex: 'User Story'"
+  output_format:
+    required: false
+    description: "Output format: json or markdown"
+    default: "json"
+outputs:
+  epic_count:
+    description: "Number of epics found"
+    value: ${{ steps.iterate.outputs.epic_count }}
+  us_count:
+    description: "Number of user stories found"
+    value: ${{ steps.iterate.outputs.us_count }}
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js 22 and install dependencies
+      if: env.project_type == 'node'
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+
+    - name: 🔍 Iterate through Project items
+      id: iterate
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ORG: ${{ inputs.org }}
+        PROJECT_NUMBER: ${{ inputs.project_number }}
+        EPIC_LABEL: ${{ inputs.epic_label }}
+        US_LABEL: ${{ inputs.us_label }}
+        OUTPUT_FORMAT: ${{ inputs.output_format }}
+      run: node "$GITHUB_ACTION_PATH/iterate-project-items.js"
