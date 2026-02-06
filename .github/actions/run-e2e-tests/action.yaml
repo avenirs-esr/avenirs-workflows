@@ -90,7 +90,6 @@ runs:
       id: e2e_tests
       shell: bash
       working-directory: e2e
-      timeout-minutes: 30
       run: ${{ inputs.chrome_only == 'true' && 'npm run e2e:chrome' || 'npm run e2e' }}
       env:
         CI: 'true'
