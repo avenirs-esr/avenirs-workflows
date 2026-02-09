@@ -1,0 +1,79 @@
+name: Check US completion (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      issue_node_id:
+        required: true
+        type: string
+        description: "GraphQL node_id of the CLOSED child issue"
+      us_issue_type:
+        required: false
+        type: string
+        default: "User Story"
+        description: "Issue Type name for User Stories"
+    secrets:
+      token:
+        required: true
+      SRV_BASE_PATH:
+        required: true
+      SRV_DEPLOY_CMD:
+        required: true
+      SRV_UPDATE_DEPLOYMENT_CMD:
+        required: true
+      JASYPT_ENCRYPTOR_PASSWORD:
+        required: true
+    outputs:
+      should_run:
+        description: "true if parent is User Story AND all its sub-issues are closed"
+        value: ${{ jobs.check.outputs.should_run }}
+
+permissions:
+  issues: read
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check_us.outputs.should_run }}
+
+    steps:
+      - name: Check if parent US is complete
+        id: check_us
+        uses: avenirs-esr/avenirs-workflows/.github/actions/check-us-done@feat/46-us-complete-deployment-workflow
+        with:
+          token: ${{ secrets.token }}
+          us_issue_type: ${{ inputs.us_issue_type }}
+          issue_node_id: ${{ inputs.issue_node_id }}
+
+      - name: Debug output
+        if: ${{ steps.check_us.outputs.should_run == 'true' }}
+        run: echo "✅ Parent is a User Story and all sub-issues are closed. should_run=true"
+
+  deploy:
+    needs: check
+    if: ${{ needs.check.outputs.should_run == 'true' }}
+    runs-on:
+      group: Default
+      labels:
+        - self-hosted
+        - srv-qualif
+    permissions:
+      contents: read
+
+    steps:
+      - name: ✅ Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: 🚀 Deploy application on remote server
+        uses: avenirs-esr/avenirs-workflows/.github/actions/deploy-on-server@main
+        with:
+          srv_base_path: ${{ secrets.SRV_BASE_PATH }}
+          srv_deploy_cmd: ${{ secrets.SRV_DEPLOY_CMD }}
+          srv_update_deployment_cmd: ${{ secrets.SRV_UPDATE_DEPLOYMENT_CMD }}
+          jasypt_encryptor_password: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
+          java_version: ${{ vars.JAVA_VERSION }}
+          maven_version: ${{ vars.MAVEN_VERSION }}

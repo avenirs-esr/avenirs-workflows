@@ -1,0 +1,35 @@
+name: "Check US sub-issues done"
+description: "Returns true if the given issue's parent is a User Story and all its sub-issues are closed."
+
+inputs:
+  token:
+    required: true
+    description: "GitHub token (GITHUB_TOKEN or GitHub App installation token)"
+  us_issue_type:
+    required: false
+    description: "Issue Type name used to identify User Stories (case-insensitive)."
+    default: "User Story"
+  issue_node_id:
+    required: true
+    description: "GraphQL node_id of the issue (child) to start from. Typically github.event.issue.node_id"
+
+outputs:
+  should_run:
+    description: "true if parent is User Story AND all its sub-issues are done/closed"
+    value: ${{ steps.check.outputs.should_run }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js 22 and install dependencies
+      if: env.project_type == 'node'
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+
+    - name: 🔍 Check parent and sub-issues status
+      id: check
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        US_ISSUE_TYPE: ${{ inputs.us_issue_type }}
+        ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
+      run: node "$GITHUB_ACTION_PATH/check-us-done.js"
