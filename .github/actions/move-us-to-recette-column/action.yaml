@@ -1,0 +1,47 @@
+name: "Move US to Recette"
+description: "Move the parent User Story of a closed sub-issue to the 'Recette' column in a GitHub Project V2."
+
+inputs:
+  token:
+    required: true
+    description: "GitHub token (GITHUB_TOKEN or GitHub App installation token)"
+  issue_node_id:
+    required: true
+    description: "GraphQL node_id of the CHILD issue (the closed sub-issue)"
+  org:
+    required: true
+    description: "Organization login (e.g. avenirs-esr)"
+  project_number:
+    required: true
+    description: "Project V2 number (not id)"
+  status_field_name:
+    required: false
+    default: "Status"
+    description: "Project field name used by the board columns"
+  target_status_name:
+    required: false
+    default: "Recette"
+    description: "Target column name"
+
+outputs:
+  moved:
+    description: "true if the US was moved to the target status, false otherwise"
+    value: ${{ steps.run.outputs.moved }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js 22 and install dependencies
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+
+    - name: 🚚 Move parent US to target status
+      id: run
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
+        ORG: ${{ inputs.org }}
+        PROJECT_NUMBER: ${{ inputs.project_number }}
+        STATUS_FIELD_NAME: ${{ inputs.status_field_name }}
+        TARGET_STATUS_NAME: ${{ inputs.target_status_name }}
+      run: node "$GITHUB_ACTION_PATH/move-us-to-recette-column.js"
