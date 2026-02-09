@@ -32,7 +32,9 @@ runs:
   using: "composite"
   steps:
     - name: 🔧 Set up Node.js 22 and install dependencies
-      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@feat/46-us-complete-deployment-workflow
+      with:
+        run-npm-command: "false"
 
     - name: 🚚 Move parent US to target status
       id: run
