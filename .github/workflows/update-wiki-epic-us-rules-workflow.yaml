@@ -22,6 +22,11 @@ on:
         required: true
         type: string
         description: "User Story label (ex: Story, User Story)"
+      mode:
+        required: false
+        type: string
+        description: "Mode: 'full' (all epics, stories and rules), 'no-rules' (all epics and stories, no rules), 'items-with-rules' (only items with rules)"
+        default: "full"
 
 jobs:
   generate-and-update:
@@ -53,6 +58,7 @@ jobs:
         with:
           json_file: project-items.json
           output_file: epic-us-rules-report.md
+          mode: ${{ inputs.mode }}
 
       - name: 📝 Update wiki
         uses: avenirs-esr/avenirs-workflows/.github/actions/wiki-update@main
