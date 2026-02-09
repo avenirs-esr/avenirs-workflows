@@ -13,7 +13,7 @@ on:
         default: "User Story"
         description: "Issue Type name for User Stories"
     secrets:
-      token:
+      GH_TOKEN:
         required: true
       SRV_BASE_PATH:
         required: true
@@ -31,6 +31,7 @@ on:
 permissions:
   issues: read
   contents: read
+  repository-projects: write
 
 jobs:
   check:
@@ -43,7 +44,7 @@ jobs:
         id: check_us
         uses: avenirs-esr/avenirs-workflows/.github/actions/check-us-done@feat/46-us-complete-deployment-workflow
         with:
-          token: ${{ secrets.token }}
+          token: ${{ secrets.GH_TOKEN }}
           us_issue_type: ${{ inputs.us_issue_type }}
           issue_node_id: ${{ inputs.issue_node_id }}
 
@@ -77,3 +78,14 @@ jobs:
           jasypt_encryptor_password: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
           java_version: ${{ vars.JAVA_VERSION }}
           maven_version: ${{ vars.MAVEN_VERSION }}
+
+      - name: 🧭 Move US to Recette in Project
+        if: success()
+        uses: avenirs-esr/avenirs-workflows/.github/actions/move-us-to-recette-column@feat/46-us-complete-deployment-workflow
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          issue_node_id: ${{ inputs.issue_node_id }}
+          org: ${{ vars.ORG }}
+          project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
+          status_field_name: ${{ vars.STATUS_FIELD_NAME }}
+          target_status_name: ${{ vars.RECETTE_STATUS_NAME }}
