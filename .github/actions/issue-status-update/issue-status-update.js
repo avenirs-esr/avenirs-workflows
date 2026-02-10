@@ -1,7 +1,7 @@
 const fs = require("fs");
 
 function out(key, value) {
-  console.log(key, value);
+  console.log(`${key}=${value}`);
 }
 
 function normalizeName(s) {
@@ -11,14 +11,13 @@ function normalizeName(s) {
     .trim();
 }
 
-async function gql(token, query, variables, extraHeaders = {}) {
+async function gql(token, query, variables) {
   const res = await fetch("https://api.github.com/graphql", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "User-Agent": "move-us-to-recette",
-      ...extraHeaders,
+      "User-Agent": "issue-status-update",
     },
     body: JSON.stringify({ query, variables }),
   });
@@ -50,31 +49,9 @@ function reqEnv(name) {
   const org = reqEnv("ORG");
   const projectNumber = Number(reqEnv("PROJECT_NUMBER"));
   const statusFieldName = (process.env.STATUS_FIELD_NAME || "Status").trim();
-  const targetStatusName = (process.env.TARGET_STATUS_NAME || "Recette").trim();
+  const targetStatusName = (process.env.TARGET_STATUS_NAME || "").trim();
 
-  const qParent = `
-    query($id: ID!) {
-      node(id: $id) {
-        ... on Issue {
-          number
-          parent { ... on Issue { id number title } }
-        }
-      }
-    }
-  `;
-
-  const parentData = await gql(
-    token,
-    qParent,
-    { id: issueNodeId },
-    { "GraphQL-Features": "sub_issues" }
-  );
-
-  const parent = parentData?.node?.parent;
-  if (!parent?.id) {
-    console.log("ℹ️ No parent found (not a sub-issue) -> nothing to move.");
-    return;
-  }
+  if (!targetStatusName) throw new Error("Missing TARGET_STATUS_NAME.");
 
   const qProject = `
     query($org: String!, $number: Int!) {
@@ -98,21 +75,18 @@ function reqEnv(name) {
 
   const projectData = await gql(token, qProject, { org, number: projectNumber });
   const project = projectData?.organization?.projectV2;
-  if (!project?.id) throw new Error("Project V2 not found or inaccessible.");
+  if (!project?.id) throw new Error(`Project V2 #${projectNumber} not found or inaccessible for org ${org}.`);
 
   const statusField = (project.fields?.nodes || []).find(
     (f) =>
       f.__typename === "ProjectV2SingleSelectField" &&
       normalizeName(f.name) === normalizeName(statusFieldName)
   );
-  if (!statusField?.id) {
-    throw new Error(`Single-select field "${statusFieldName}" not found in project.`);
-  }
+  if (!statusField?.id) throw new Error(`Single-select field "${statusFieldName}" not found in project.`);
 
   const targetOption = (statusField.options || []).find(
     (o) => normalizeName(o.name) === normalizeName(targetStatusName)
   );
-
   if (!targetOption?.id) {
     throw new Error(`Option "${targetStatusName}" not found in field "${statusFieldName}".`);
   }
@@ -121,12 +95,11 @@ function reqEnv(name) {
     query($issueId: ID!) {
       node(id: $issueId) {
         ... on Issue {
+          number
           projectItems(first: 50) {
             nodes {
               id
-              project {
-                ... on ProjectV2 { number }
-              }
+              project { ... on ProjectV2 { number } }
             }
           }
         }
@@ -134,12 +107,13 @@ function reqEnv(name) {
     }
   `;
 
-  const itemsData = await gql(token, qItems, { issueId: parent.id });
-  const items = itemsData?.node?.projectItems?.nodes || [];
+  const itemsData = await gql(token, qItems, { issueId: issueNodeId });
+  const issueNode = itemsData?.node;
+  const items = issueNode?.projectItems?.nodes || [];
   const item = items.find((i) => i?.project?.number === projectNumber);
 
   if (!item?.id) {
-    console.log(`ℹ️ Parent US #${parent.number} not linked to Project V2 #${projectNumber} -> nothing to move.`);
+    console.log(`ℹ️ Issue not linked to Project V2 #${projectNumber} -> nothing to move.`);
     return;
   }
 
@@ -163,7 +137,7 @@ function reqEnv(name) {
     optionId: targetOption.id,
   });
 
-  console.log(`✅ Moved US #${parent.number} to "${targetStatusName}"`);
+  console.log(`✅ Moved issue #${issueNode?.number ?? "?"} to "${targetStatusName}"`);
   out("moved", "true");
 })().catch((e) => {
   console.error("❌ Error:", e);
