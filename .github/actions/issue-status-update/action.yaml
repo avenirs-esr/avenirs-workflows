@@ -32,11 +32,11 @@ runs:
   using: "composite"
   steps:
     - name: 🔧 Set up Node.js 22 and install dependencies
-      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@feat/46-us-complete-deployment-workflow
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
       with:
         run-npm-command: "false"
 
-    - name: 🚚 Move parent US to target status
+    - name: 🔄️ Update issue status
       id: run
       shell: bash
       env:
@@ -46,4 +46,4 @@ runs:
         PROJECT_NUMBER: ${{ inputs.project_number }}
         STATUS_FIELD_NAME: ${{ inputs.status_field_name }}
         TARGET_STATUS_NAME: ${{ inputs.target_status_name }}
-      run: node "$GITHUB_ACTION_PATH/move-us-to-recette-column.js"
+      run: node "$GITHUB_ACTION_PATH/issue-status-update.js"
