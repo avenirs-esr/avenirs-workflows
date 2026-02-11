@@ -7,11 +7,6 @@ on:
         required: true
         type: string
         description: "GraphQL node_id of the CLOSED child issue"
-      us_issue_type:
-        required: false
-        type: string
-        default: "User Story"
-        description: "Issue Type name for User Stories"
     secrets:
       GH_TOKEN:
         required: true
@@ -41,7 +36,6 @@ jobs:
         uses: avenirs-esr/avenirs-workflows/.github/actions/check-us-done@main
         with:
           token: ${{ secrets.GH_TOKEN }}
-          us_issue_type: ${{ inputs.us_issue_type }}
           issue_node_id: ${{ inputs.issue_node_id }}
 
   update-us-status:
@@ -75,7 +69,5 @@ jobs:
         with:
           token: ${{ steps.app.outputs.app-token }}
           issue_node_id: ${{ steps.parent.outputs.resolved_issue_node_id }}
-          org: ${{ vars.ORG }}
           project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
-          status_field_name: ${{ vars.STATUS_FIELD_NAME }}
           target_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
