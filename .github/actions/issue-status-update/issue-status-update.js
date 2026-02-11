@@ -48,7 +48,7 @@ function reqEnv(name) {
   const issueNodeId = reqEnv("ISSUE_NODE_ID");
   const org = reqEnv("ORG");
   const projectNumber = Number(reqEnv("PROJECT_NUMBER"));
-  const statusFieldName = (process.env.STATUS_FIELD_NAME || "Status").trim();
+  const statusFieldName = "Status";
   const targetStatusName = (process.env.TARGET_STATUS_NAME || "").trim();
 
   if (!targetStatusName) throw new Error("Missing TARGET_STATUS_NAME.");
