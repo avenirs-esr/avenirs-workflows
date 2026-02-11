@@ -68,6 +68,6 @@ jobs:
         uses: avenirs-esr/avenirs-workflows/.github/actions/issue-status-update@main
         with:
           token: ${{ steps.app.outputs.app-token }}
-          issue_node_id: ${{ steps.parent.outputs.resolved_issue_node_id }}
+          issue_node_id: ${{ steps.parent.outputs.parent_issue_node_id }}
           project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
           target_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
