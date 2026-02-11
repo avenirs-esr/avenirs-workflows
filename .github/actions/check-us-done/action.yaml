@@ -5,10 +5,6 @@ inputs:
   token:
     required: true
     description: "GitHub token (GITHUB_TOKEN or GitHub App installation token)"
-  us_issue_type:
-    required: false
-    description: "Issue Type name used to identify User Stories (case-insensitive)."
-    default: "User Story"
   issue_node_id:
     required: true
     description: "GraphQL node_id of the issue (child) to start from. Typically github.event.issue.node_id"
@@ -30,6 +26,6 @@ runs:
       shell: bash
       env:
         TOKEN: ${{ inputs.token }}
-        US_ISSUE_TYPE: ${{ inputs.us_issue_type }}
+        US_ISSUE_TYPE: ${{ vars.US_ISSUE_TYPE }}
         ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
       run: node "$GITHUB_ACTION_PATH/check-us-done.js"

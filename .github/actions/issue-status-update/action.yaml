@@ -8,16 +8,9 @@ inputs:
   issue_node_id:
     required: true
     description: "GraphQL node_id of the CHILD issue (the closed sub-issue)"
-  org:
-    required: true
-    description: "Organization login (e.g. avenirs-esr)"
   project_number:
     required: true
-    description: "Project V2 number (not id)"
-  status_field_name:
-    required: false
-    default: "Status"
-    description: "Project field name used by the board columns"
+    description: "Project V2 number (not id) (e.g. 16 for Cofolio project)"
   target_status_name:
     required: false
     default: "Recette"
@@ -42,8 +35,7 @@ runs:
       env:
         TOKEN: ${{ inputs.token }}
         ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
-        ORG: ${{ inputs.org }}
+        ORG: ${{ vars.ORG }}
         PROJECT_NUMBER: ${{ inputs.project_number }}
-        STATUS_FIELD_NAME: ${{ inputs.status_field_name }}
         TARGET_STATUS_NAME: ${{ inputs.target_status_name }}
       run: node "$GITHUB_ACTION_PATH/issue-status-update.js"

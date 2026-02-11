@@ -73,7 +73,6 @@ async function gql(token, query, variables) {
   if (parent?.id) {
     setOutput("parent_issue_node_id", parent.id);
     setOutput("parent_issue_number", String(parent.number ?? ""));
-    setOutput("resolved_issue_node_id", parent.id);
     console.log(`✅ Parent found: #${parent.number} (${parent.id})`);
   } else {
     console.log("ℹ️ No parent found (issue is not a sub-issue).");
