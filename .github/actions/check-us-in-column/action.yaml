@@ -1,0 +1,38 @@
+name: "Should run if US in column"
+description: "Returns should_run=true if there is at least one User Story issue in the given Project V2 column (single-select field)."
+
+inputs:
+  token:
+    required: true
+    description: "GitHub token (PAT or GitHub App token recommended) with access to org Project V2"
+  project_number:
+    required: true
+    description: "Project V2 number (not id), (e.g. 16 for Cofolio project)"
+  target_status_name:
+    required: false
+    default: "In Review"
+    description: "Target column name (e.g. 'In Review')"
+
+outputs:
+  should_run:
+    description: "true if at least one US is found in the target column"
+    value: ${{ steps.run.outputs.should_run }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js 22 and install dependencies
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 🔍 Check Project V2 column for US
+      id: run
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ORG: ${{ vars.ORG }}
+        PROJECT_NUMBER: ${{ inputs.project_number }}
+        TARGET_STATUS_NAME: ${{ inputs.target_status_name }}
+        US_ISSUE_TYPE: ${{ vars.US_ISSUE_TYPE }}
+      run: node "$GITHUB_ACTION_PATH/check-us-in-column.js"
