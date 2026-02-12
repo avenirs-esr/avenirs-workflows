@@ -1,0 +1,75 @@
+name: Check US completion (reusable)
+
+on:
+  workflow_call:
+    secrets:
+      GH_TOKEN:
+        required: true
+      GH_APP_ID:
+        required: true
+      GH_APP_TOKEN:
+        required: true
+      SRV_BASE_PATH:
+        required: true
+      SRV_DEPLOY_CMD:
+        required: true
+      SRV_UPDATE_DEPLOYMENT_CMD:
+        required: true
+      JASYPT_ENCRYPTOR_PASSWORD:
+        required: true
+    outputs:
+      should_run:
+        description: "true if parent is User Story AND all its sub-issues are closed"
+        value: ${{ jobs.check.outputs.should_run }}
+
+permissions:
+  issues: read
+  contents: read
+  repository-projects: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check_us.outputs.should_run }}
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 🔍 Search US In Review
+        id: check_us
+        uses: avenirs-esr/avenirs-workflows/.github/actions/check-us-in-column@feat/46-deployment-workflow
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
+          target_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
+
+  update-us-status:
+    needs: check
+    if: ${{ needs.check.outputs.should_run == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 🧭 Move US to Recette in Project
+        uses: avenirs-esr/avenirs-workflows/.github/actions/group-issues-status-update@feat/46-deployment-workflow
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
+          from_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
+          target_status_name: ${{ vars.RECETTE_STATUS_NAME }}
