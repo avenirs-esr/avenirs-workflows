@@ -56,7 +56,7 @@ runs:
 
     - name: 🔧 Set up Node.js 22 and install dependencies
       if: ${{ inputs.need_to_checkout == 'true' }}
-      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@feat/46-deployment-workflow
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
       with:
         working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client' || '' }}
 
