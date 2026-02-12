@@ -50,22 +50,49 @@ jobs:
           project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
           target_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
 
-      - name: 🎭 Run E2E Tests
-        if: ${{ steps.check_us.outputs.should_run == 'true' }}
-        id: e2e
-        uses: avenirs-esr/avenirs-workflows/.github/actions/run-e2e-tests@feat/46-deployment-workflow
+#      - name: 🎭 Run E2E Tests
+#        if: ${{ steps.check_us.outputs.should_run == 'true' }}
+#        id: e2e
+#        uses: avenirs-esr/avenirs-workflows/.github/actions/run-e2e-tests@feat/46-deployment-workflow
+#        with:
+#          base_url: ${{ vars.DEV_COFOLIO_URL }}
+#          run_local_preview: "false"
+#          enable_msw: "false"
+#          upload_report: "false"
+#          chrome_only: "false"
+#          review_mode: "true"
+#          need_to_checkout: "true"
+#          token: ${{ steps.app.outputs.app-token }}
+
+  comment-us:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      repository-projects: write
+      contents: read
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
         with:
-          base_url: ${{ vars.DEV_COFOLIO_URL }}
-          run_local_preview: "false"
-          enable_msw: "false"
-          upload_report: "false"
-          chrome_only: "false"
-          review_mode: "true"
-          need_to_checkout: "true"
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 💬 Comment all US in In Review (tests failed)
+        uses: avenirs-esr/avenirs-workflows/.github/actions/group-issues-commentary@feat/46-deployment-workflow
+        with:
           token: ${{ steps.app.outputs.app-token }}
+          project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
+          from_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
+          body: |
+            ❌ Nightly E2E failed on DEV. Deployment cancelled.
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   update-us-status:
-    needs: check
+    needs: comment-us
     if: ${{ success() }}
     runs-on: ubuntu-latest
     permissions:

@@ -1,0 +1,36 @@
+name: "Comment US in column"
+description: "Comment all User Stories currently in a given Project V2 status (e.g. In Review)."
+
+inputs:
+  token:
+    required: true
+    description: "GitHub token (PAT/GH App token recommended) with access to Project V2 + issues write on repos"
+  project_number:
+    required: true
+    description: "Project V2 number (e.g. 16)"
+  from_status_name:
+    required: true
+    description: "Column/status to target (e.g. In Review)"
+  body:
+    required: true
+    description: "Comment body to post on each US"
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js 22 and install dependencies
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 💬 Comment issues
+      id: run
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ORG: ${{ vars.ORG }}
+        PROJECT_NUMBER: ${{ inputs.project_number }}
+        FROM_STATUS_NAME: ${{ inputs.from_status_name }}
+        US_ISSUE_TYPE: ${{ vars.US_ISSUE_TYPE }}
+        BODY: ${{ inputs.body }}
+      run: node "$GITHUB_ACTION_PATH/group-issues-commentary.js"
