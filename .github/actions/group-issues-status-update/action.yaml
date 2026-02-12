@@ -1,0 +1,38 @@
+name: "Move User Stories between Project V2 columns"
+description: "Move all User Stories from one Project V2 status/column to another (single-select field)."
+
+inputs:
+  token:
+    required: true
+    description: "GitHub token with access to the org Project V2 (GitHub App token recommended)"
+  project_number:
+    required: true
+    description: "Project V2 number (not id), e.g. 16"
+  from_status_name:
+    required: false
+    default: "In Review"
+    description: "Source column/status name"
+  target_status_name:
+    required: false
+    default: "Recette"
+    description: "Target column/status name"
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js 22 and install dependencies
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 🔁 Move all US from one column to another
+      id: run
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ORG: ${{ vars.ORG }}
+        PROJECT_NUMBER: ${{ inputs.project_number }}
+        FROM_STATUS_NAME: ${{ inputs.from_status_name }}
+        TARGET_STATUS_NAME: ${{ inputs.target_status_name }}
+        US_ISSUE_TYPE: ${{ vars.US_ISSUE_TYPE }}
+      run: node "$GITHUB_ACTION_PATH/group-issues-status-update.js"
