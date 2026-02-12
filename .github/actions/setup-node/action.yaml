@@ -6,6 +6,10 @@ inputs:
     required: false
     description: "Whether to run npm ci to install dependencies. Set to 'true' to run, 'false' to skip."
     default: "true"
+  working-directory:
+    required: false
+    description: "Working directory for npm commands (relative to the repository root). If not set, commands will run in the default working directory."
+    default: ""
 
 runs:
   using: "composite"
@@ -15,13 +19,16 @@ runs:
       with:
         node-version: '22'
         cache: ${{ inputs.run-npm-command == 'true' && 'npm' || '' }}
+        cache-dependency-path: ${{ inputs.working-directory }}
 
     - name: Update npm
       if: ${{ inputs.run-npm-command == 'true' }}
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: npm install -g npm@latest
 
     - name: Install dependencies with npm ci
       if: ${{ inputs.run-npm-command == 'true' }}
+      working-directory: ${{ inputs.working-directory }}
       shell: bash
       run: npm ci --include=optional
