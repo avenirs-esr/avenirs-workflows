@@ -25,6 +25,37 @@ on:
         type: boolean
         default: true
 
+  workflow_dispatch:
+    inputs:
+      run_lint:
+        description: 'Run Linting?'
+        type: boolean
+        default: true
+      run_security_scan:
+        description: 'Run Security Scan?'
+        type: boolean
+        default: true
+      run_unit_tests:
+        description: 'Run Unit Tests?'
+        type: boolean
+        default: true
+      run_integration_tests:
+        description: 'Run Integration Tests?'
+        type: boolean
+        default: true
+      page_title:
+        description: 'Documentation Page Title'
+        type: string
+        default: "Documentation"
+      lint_fail_on_error:
+        description: 'Fail on Lint Error?'
+        type: boolean
+        default: true
+      security_fail_on_critical:
+        description: 'Fail on Critical Security Issues?'
+        type: boolean
+        default: true
+
 jobs:
   setup:
     runs-on: ubuntu-latest
@@ -37,6 +68,7 @@ jobs:
           submodules: recursive
       - name: 📤 Upload Templates
         uses: avenirs-esr/avenirs-workflows/.github/actions/upload-templates@main
+
   lint:
     if: ${{ inputs.run_lint }}
     runs-on: ubuntu-latest
