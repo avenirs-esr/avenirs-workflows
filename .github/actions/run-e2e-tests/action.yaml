@@ -40,7 +40,9 @@ inputs:
     description: GitHub token for checkout (if needed)
     required: false
     default: ''
-
+  empty_dataset_access_token:
+    description: Token for empty dataset user (used for @dataset-empty E2E scenarios)
+    required: false
 runs:
   using: composite
   steps:
@@ -124,6 +126,7 @@ runs:
         USERNAME: ${{ inputs.username }}
         PASSWORD: ${{ inputs.password }}
         REVIEW_MODE: ${{ inputs.review_mode }}
+        EMPTY_DATASET_ACCESS_TOKEN: ${{ inputs.empty_dataset_access_token }}
 
     - name: 📦 Upload Playwright Report
       if: ${{ always() && inputs.upload_report == 'true' }}
