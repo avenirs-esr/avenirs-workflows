@@ -51,6 +51,7 @@ jobs:
           upload_report: ${{ inputs.deploy_to_gh_pages }}
           chrome_only: ${{ inputs.chrome_only }}
           review_mode: ${{ inputs.review_mode }}
+          empty_dataset_access_token: ${{ secrets.EMPTY_DATASET_ACCESS_TOKEN }}
 
       - name: 📥 Download Playwright Report
         if: ${{ failure() && inputs.deploy_to_gh_pages }}
