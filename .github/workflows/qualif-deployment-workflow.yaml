@@ -17,6 +17,8 @@ on:
         required: true
       JASYPT_ENCRYPTOR_PASSWORD:
         required: true
+      EMPTY_DATASET_ACCESS_TOKEN:
+        required: true
     outputs:
       should_run:
         description: "true if parent is User Story AND all its sub-issues are closed"
@@ -63,6 +65,7 @@ jobs:
           review_mode: "true"
           need_to_checkout: "true"
           token: ${{ steps.app.outputs.app-token }}
+          empty_dataset_access_token: ${{ secrets.EMPTY_DATASET_ACCESS_TOKEN }}
 
   deploy:
     needs: check
