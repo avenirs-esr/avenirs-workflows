@@ -127,6 +127,7 @@ runs:
         PASSWORD: ${{ inputs.password }}
         REVIEW_MODE: ${{ inputs.review_mode }}
         EMPTY_DATASET_ACCESS_TOKEN: ${{ inputs.empty_dataset_access_token }}
+        MSW_MODE_ON: ${{ inputs.enable_msw }}
 
     - name: 📦 Upload Playwright Report
       if: ${{ always() && inputs.upload_report == 'true' }}
