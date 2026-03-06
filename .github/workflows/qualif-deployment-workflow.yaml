@@ -19,6 +19,10 @@ on:
         required: true
       EMPTY_DATASET_ACCESS_TOKEN:
         required: true
+      ADMIN_TOKEN:
+        required: true
+      BEARER_TOKEN:
+        required: true
     outputs:
       should_run:
         description: "true if parent is User Story AND all its sub-issues are closed"
@@ -51,6 +55,14 @@ jobs:
           token: ${{ steps.app.outputs.app-token }}
           project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
           target_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
+
+      - name: ♻️ Reset and seed DEV dataset
+        if: ${{ steps.check_us.outputs.should_run == 'true' }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/reset-and-seed-dataset@main
+        with:
+          seeding_endpoint_path: ${{ vars.SEEDING_ENDPOINT_URL }}
+          admin_token: ${{ secrets.ADMIN_TOKEN }}
+          bearer_token: ${{ secrets.BEARER_TOKEN }}
 
       - name: 🎭 Run E2E Tests
         if: ${{ steps.check_us.outputs.should_run == 'true' }}
