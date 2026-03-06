@@ -12,6 +12,14 @@ inputs:
     required: false
     default: "In Review"
     description: "Target column name (e.g. 'In Review')"
+  org:
+    required: false
+    default: "avenirs-esr"
+    description: "GitHub organization name (default: avenirs-esr)"
+  issue_type:
+    required: false
+    default: "User Story"
+    description: "Issue type to look for in the column (default: 'User Story')"
 
 outputs:
   should_run:
@@ -31,8 +39,8 @@ runs:
       shell: bash
       env:
         TOKEN: ${{ inputs.token }}
-        ORG: ${{ vars.ORG }}
+        ORG: ${{ inputs.org }}
         PROJECT_NUMBER: ${{ inputs.project_number }}
         TARGET_STATUS_NAME: ${{ inputs.target_status_name }}
-        US_ISSUE_TYPE: ${{ vars.US_ISSUE_TYPE }}
+        US_ISSUE_TYPE: ${{ inputs.issue_type }}
       run: node "$GITHUB_ACTION_PATH/check-us-in-column.js"
