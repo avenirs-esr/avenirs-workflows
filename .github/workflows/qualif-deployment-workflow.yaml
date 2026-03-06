@@ -51,6 +51,8 @@ jobs:
           token: ${{ steps.app.outputs.app-token }}
           project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
           target_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
+          org: ${{ vars.ORG }}
+          issue_type: ${{ vars.US_ISSUE_TYPE }}
 
       - name: 🎭 Run E2E Tests
         if: ${{ steps.check_us.outputs.should_run == 'true' }}
