@@ -4,12 +4,20 @@ runs:
   using: "composite"
   steps:
     - name: Check if Trivy is already installed
+      id: check_trivy
       run: |
-        if ! command -v trivy &> /dev/null; then
-          echo "Trivy not found. Installing..."
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-          sudo mv ./bin/trivy /usr/local/bin/trivy
-        else
+        if command -v trivy &> /dev/null; then
           echo "Trivy is already installed."
+          echo "should_install=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "Trivy not found."
+          echo "should_install=true" >> "$GITHUB_OUTPUT"
         fi
       shell: bash
+
+    - name: Setup Trivy
+      if: steps.check_trivy.outputs.should_install == 'true'
+      uses: aquasecurity/setup-trivy@v0.2.2
+      with:
+        version: v0.69.3
+        cache: true
