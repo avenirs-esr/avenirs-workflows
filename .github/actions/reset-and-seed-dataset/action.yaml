@@ -1,0 +1,49 @@
+name: "Reset and seed API"
+description: "Calls the admin reset-and-seed endpoint and waits for completion"
+
+inputs:
+  seeding_endpoint_path:
+    description: "Admin seeding endpoint path (relative to API base URL)"
+    required: true
+  admin_token:
+    description: "Admin token sent in X-ADMIN-TOKEN header"
+    required: true
+  bearer_token:
+    description: "Bearer token sent in Authorization header"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Call reset and seed endpoint
+      shell: bash
+      env:
+        SEEDING_ENDPOINT: ${{ inputs.seeding_endpoint_path }}
+        ADMIN_TOKEN: ${{ inputs.admin_token }}
+        BEARER_TOKEN: ${{ inputs.bearer_token }}
+      run: |
+        set -euo pipefail
+
+        response_file="$(mktemp)"
+
+        http_code="$(
+          curl -sS \
+            -o "$response_file" \
+            -w "%{http_code}" \
+            --max-time 1800 \
+            --request POST \
+            --header "Authorization: Bearer ${BEARER_TOKEN}" \
+            --header "X-ADMIN-TOKEN: ${ADMIN_TOKEN}" \
+            "${SEEDING_ENDPOINT}"
+        )"
+
+        response_body="$(tr -d '\r\n' < "$response_file")"
+
+        if [[ "$http_code" != "200" ]]; then
+          echo "Reset and seed failed with HTTP status: $http_code"
+          echo "Response body:"
+          cat "$response_file"
+          exit 1
+        fi
+
+        echo "Reset and seed completed successfully."
