@@ -4,7 +4,7 @@ inputs:
   fail_on_critical:
     description: "Echouer si des vulnérabilités critiques sont détectées (true/false)"
     required: false
-    default: true
+    default: "true"
   severity:
     description: "Niveau de sévérité à analyser (LOW, MEDIUM, HIGH, CRITICAL)"
     required: false
@@ -23,14 +23,16 @@ runs:
 
     - name: Create Directory for Security Report
       run: |
-          mkdir -p dependency-check-report
-          echo "Répertoire de rapport de sécurité créé."
+        mkdir -p dependency-check-report
+        echo "Répertoire de rapport de sécurité créé."
       shell: bash
 
     - name: Security Scan with Trivy (Generate HTML Report)
-      uses: aquasecurity/trivy-action@0.30.0
+      uses: aquasecurity/trivy-action@0.34.2
       with:
+        skip-setup-trivy: true
         scan-type: "fs"
+        scan-ref: "."
         severity: ${{ inputs.severity }}
         ignore-unfixed: false
         format: "template"
@@ -38,14 +40,17 @@ runs:
         output: "dependency-check-report/security-report.html"
 
     - name: Security Scan with Trivy (Critical Only)
-      if: ${{ inputs.fail_on_critical == true }}
-      uses: aquasecurity/trivy-action@0.30.0
+      if: ${{ inputs.fail_on_critical == 'true' }}
+      uses: aquasecurity/trivy-action@0.34.2
       with:
-        scan-type: "fs"
-        severity: "CRITICAL"
+        skip-setup-trivy: true
+        scan-type: fs
+        scan-ref: .
+        severity: CRITICAL
         ignore-unfixed: false
-        format: "table"
+        format: table
         exit-code: 1
+        hide-progress: false
 
     - name: Afficher le résumé du rapport
       run: |
