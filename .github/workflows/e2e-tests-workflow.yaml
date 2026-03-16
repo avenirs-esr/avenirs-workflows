@@ -1,0 +1,59 @@
+name: "e2e tests workflows"
+
+on:
+  workflow_call:
+    inputs:
+      host_url:
+        description: "Base URL of the environment where e2e tests will be run (e.g. https://dev.cofolio.avenirs.io)"
+        required: true
+        type: string
+    secrets:
+      GH_APP_ID:
+        required: true
+      GH_APP_TOKEN:
+        required: true
+      EMPTY_DATASET_ACCESS_TOKEN:
+        required: true
+      ADMIN_TOKEN:
+        required: true
+      BEARER_TOKEN:
+        required: true
+
+permissions:
+  issues: read
+  contents: read
+  repository-projects: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: ♻️ Reset and seed DEV dataset
+        uses: avenirs-esr/avenirs-workflows/.github/actions/reset-and-seed-dataset@main
+        with:
+          seeding_endpoint_path: ${{ vars.SEEDING_ENDPOINT_URL }}
+          admin_token: ${{ secrets.ADMIN_TOKEN }}
+          bearer_token: ${{ secrets.BEARER_TOKEN }}
+
+      - name: 🎭 Run E2E Tests
+        id: e2e
+        uses: avenirs-esr/avenirs-workflows/.github/actions/run-e2e-tests@main
+        with:
+          base_url: ${{ inputs.host_url }}
+          run_local_preview: "false"
+          enable_msw: "false"
+          upload_report: "false"
+          chrome_only: "false"
+          review_mode: "true"
+          need_to_checkout: "true"
+          token: ${{ steps.app.outputs.app-token }}
+          empty_dataset_access_token: ${{ secrets.EMPTY_DATASET_ACCESS_TOKEN }}
