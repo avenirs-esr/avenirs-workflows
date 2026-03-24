@@ -13,7 +13,7 @@ runs:
   using: "composite"
   steps:
     - name: Setup Trivy
-      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-trivy@v0.2.6 
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-trivy@0.2.6 
 
     - name: Download Trivy Template
       uses: actions/download-artifact@v4
