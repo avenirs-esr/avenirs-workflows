@@ -41,7 +41,7 @@ runs:
 
     - name: Security Scan with Trivy (Critical Only)
       if: ${{ inputs.fail_on_critical == 'true' }}
-      uses: aquasecurity/trivy-action@0.34.2
+      uses: aquasecurity/trivy-action@0.35.0
       with:
         skip-setup-trivy: true
         scan-type: fs
