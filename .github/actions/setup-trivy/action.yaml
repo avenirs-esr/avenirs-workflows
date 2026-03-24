@@ -17,7 +17,7 @@ runs:
 
     - name: Setup Trivy
       if: steps.check_trivy.outputs.should_install == 'true'
-      uses: aquasecurity/setup-trivy@v0.2.2
+      uses: aquasecurity/setup-trivy@v0.2.6
       with:
         version: v0.69.3
         cache: true
