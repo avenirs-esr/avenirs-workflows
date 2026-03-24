@@ -28,7 +28,7 @@ runs:
       shell: bash
 
     - name: Security Scan with Trivy (Generate HTML Report)
-      uses: aquasecurity/trivy-action@0.34.2
+      uses: aquasecurity/trivy-action@0.35.0
       with:
         skip-setup-trivy: true
         scan-type: "fs"
