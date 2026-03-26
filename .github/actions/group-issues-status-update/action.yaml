@@ -16,6 +16,14 @@ inputs:
     required: false
     default: "Recette"
     description: "Target column/status name"
+  org:
+    required: false
+    default: "avenirs-esr"
+    description: "GitHub organization name (used in GraphQL queries, e.g. to get project and issue info)"
+  us_issue_type:
+    required: false
+    default: "User Story"
+    description: "Name of the User Story issue type in the repo (used to filter issues to move, e.g. if there are multiple issue types in the project)"
 
 runs:
   using: "composite"
@@ -30,9 +38,9 @@ runs:
       shell: bash
       env:
         TOKEN: ${{ inputs.token }}
-        ORG: ${{ vars.ORG }}
+        ORG: ${{ inputs.org }}
         PROJECT_NUMBER: ${{ inputs.project_number }}
         FROM_STATUS_NAME: ${{ inputs.from_status_name }}
         TARGET_STATUS_NAME: ${{ inputs.target_status_name }}
-        US_ISSUE_TYPE: ${{ vars.US_ISSUE_TYPE }}
+        US_ISSUE_TYPE: ${{ inputs.us_issue_type }}
       run: node "$GITHUB_ACTION_PATH/group-issues-status-update.js"

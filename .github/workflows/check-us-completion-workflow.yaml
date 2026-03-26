@@ -37,6 +37,7 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN }}
           issue_node_id: ${{ inputs.issue_node_id }}
+          us_issue_type: ${{ vars.US_ISSUE_TYPE }}
 
   update-us-status:
     needs: check
@@ -71,3 +72,4 @@ jobs:
           issue_node_id: ${{ steps.parent.outputs.parent_issue_node_id }}
           project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
           target_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
+          org: ${{ vars.ORG }}

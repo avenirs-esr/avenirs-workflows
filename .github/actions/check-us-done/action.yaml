@@ -8,6 +8,10 @@ inputs:
   issue_node_id:
     required: true
     description: "GraphQL node_id of the issue (child) to start from. Typically github.event.issue.node_id"
+  us_issue_type:
+    required: false
+    default: "User Story"
+    description: "Name of the User Story issue type in the repo (used to filter issues to move, e.g. if there are multiple issue types in the project)"
 
 outputs:
   should_run:
@@ -26,6 +30,6 @@ runs:
       shell: bash
       env:
         TOKEN: ${{ inputs.token }}
-        US_ISSUE_TYPE: ${{ vars.US_ISSUE_TYPE }}
+        US_ISSUE_TYPE: ${{ inputs.us_issue_type }}
         ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
       run: node "$GITHUB_ACTION_PATH/check-us-done.js"
