@@ -136,6 +136,8 @@ jobs:
           body: |
             ❌ Nightly workflow failed. Deployment cancelled.
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          org: ${{ vars.ORG }}
+          us_issue_type: ${{ vars.US_ISSUE_TYPE }}
 
       - name: 🧭 Move US to Recette in Project
         if: ${{ needs.check.result == 'success' && needs.deploy.result == 'success' }}
@@ -145,3 +147,5 @@ jobs:
           project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
           from_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
           target_status_name: ${{ vars.RECETTE_STATUS_NAME }}
+          org: ${{ vars.ORG }}
+          us_issue_type: ${{ vars.US_ISSUE_TYPE }}

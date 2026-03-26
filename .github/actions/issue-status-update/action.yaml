@@ -15,6 +15,10 @@ inputs:
     required: false
     default: "Recette"
     description: "Target column name"
+  org:
+    required: false
+    default: "avenirs-esr"
+    description: "GitHub organization name (used in GraphQL queries, e.g. to get project and issue info)"
 
 outputs:
   moved:
@@ -35,7 +39,7 @@ runs:
       env:
         TOKEN: ${{ inputs.token }}
         ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
-        ORG: ${{ vars.ORG }}
+        ORG: ${{ inputs.org }}
         PROJECT_NUMBER: ${{ inputs.project_number }}
         TARGET_STATUS_NAME: ${{ inputs.target_status_name }}
       run: node "$GITHUB_ACTION_PATH/issue-status-update.js"
