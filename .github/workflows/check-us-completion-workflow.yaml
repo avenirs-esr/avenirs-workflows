@@ -18,6 +18,12 @@ on:
       should_run:
         description: "true if parent is User Story AND all its sub-issues are closed"
         value: ${{ jobs.check.outputs.should_run }}
+      test_task:
+        description: "true if parent US contains at least one sub-task with [TEST] in title"
+        value: ${{ jobs.check.outputs.test_task }}
+      parent_issue_node_id:
+        description: "GraphQL node_id of the parent issue (User Story)"
+        value: ${{ jobs.check.outputs.parent_issue_node_id }}
 
 permissions:
   issues: read
@@ -29,6 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       should_run: ${{ steps.check_us.outputs.should_run }}
+      test_task: ${{ steps.check_test_task.outputs.test_task }}
+      parent_issue_node_id: ${{ steps.parent.outputs.parent_issue_node_id }}
 
     steps:
       - name: 👮‍♂️ Check if parent US is complete
@@ -39,9 +47,34 @@ jobs:
           issue_node_id: ${{ inputs.issue_node_id }}
           us_issue_type: ${{ vars.US_ISSUE_TYPE }}
 
-  update-us-status:
+      - name: 🔐 Create GitHub App token
+        id: app
+        if: ${{ steps.check_us.outputs.should_run == 'true' }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 🔍 Resolve parent US
+        id: parent
+        if: ${{ steps.check_us.outputs.should_run == 'true' }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/resolve-parent-issue@main
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          issue_node_id: ${{ inputs.issue_node_id }}
+
+      - name: 🔍 Check if parent US has a [TEST] sub-task
+        id: check_test_task
+        if: ${{ steps.check_us.outputs.should_run == 'true' }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/check-us-test-task@main
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          us_issue_node_id: ${{ steps.parent.outputs.parent_issue_node_id }}
+
+  comment-missing-test-task:
     needs: check
-    if: ${{ needs.check.outputs.should_run == 'true' }}
+    if: ${{ needs.check.outputs.should_run == 'true' && needs.check.outputs.test_task == 'false' }}
     runs-on: ubuntu-latest
     permissions:
       repository-projects: write
@@ -57,19 +90,39 @@ jobs:
           app_private_key: ${{ secrets.GH_APP_TOKEN }}
           owner: ${{ vars.ORG }}
 
-      - name: 🔍 Resolve parent US
-        id: parent
-        uses: avenirs-esr/avenirs-workflows/.github/actions/resolve-parent-issue@main
+      - name: 💬 Comment missing [TEST] task on parent US
+        uses: avenirs-esr/avenirs-workflows/.github/actions/comment-on-issue@main
         with:
           token: ${{ steps.app.outputs.app-token }}
-          issue_node_id: ${{ inputs.issue_node_id }}
+          issue_node_id: ${{ needs.check.outputs.parent_issue_node_id }}
+          body: |
+            ⚠️ Cette User Story ne peut pas être considérée comme complète car aucune sous-tâche de test n’a été détectée.
+            Merci d’ajouter une sub-task dont le titre contient `[TEST]`.
+
+  update-us-status:
+    needs: check
+    if: ${{ needs.check.outputs.should_run == 'true' && needs.check.outputs.test_task == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      repository-projects: write
+      issues: write
+      contents: read
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
 
       - name: 🧭 Move US to In Review in Project
         if: ${{ success() }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/issue-status-update@main
         with:
           token: ${{ steps.app.outputs.app-token }}
-          issue_node_id: ${{ steps.parent.outputs.parent_issue_node_id }}
+          issue_node_id: ${{ needs.check.outputs.parent_issue_node_id }}
           project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
           target_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
           org: ${{ vars.ORG }}

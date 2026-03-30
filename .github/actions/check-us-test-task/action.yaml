@@ -1,0 +1,31 @@
+name: "Check US test task"
+description: "Checks whether a User Story contains at least one sub-task with [TEST] in its title."
+
+inputs:
+  token:
+    required: true
+    description: "GitHub token with GraphQL read access"
+  us_issue_node_id:
+    required: true
+    description: "GraphQL node_id of the parent User Story issue"
+
+outputs:
+  test_task:
+    description: "true if parent US contains a sub-task with [TEST] in title"
+    value: ${{ steps.run.outputs.test_task }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js 22 and install dependencies
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 🔍 Check [TEST] sub-task
+      id: run
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        PARENT_ISSUE_NODE_ID: ${{ inputs.us_issue_node_id }}
+      run: node "$GITHUB_ACTION_PATH/check-us-test-task.js"

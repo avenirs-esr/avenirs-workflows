@@ -1,0 +1,29 @@
+name: "Comment single issue"
+description: "Post a comment on a single GitHub issue from its node id."
+
+inputs:
+  token:
+    required: true
+    description: "GitHub token with issues write access"
+  issue_node_id:
+    required: true
+    description: "GraphQL node_id of the issue to comment"
+  body:
+    required: true
+    description: "Comment body"
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js 22 and install dependencies
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 💬 Comment issue
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
+        BODY: ${{ inputs.body }}
+      run: node "$GITHUB_ACTION_PATH/comment-on-issue.js"
