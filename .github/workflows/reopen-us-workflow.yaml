@@ -1,0 +1,90 @@
+name: Reopen parent US status (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      issue_node_id:
+        required: true
+        type: string
+        description: "GraphQL node_id of the opened/reopened issue"
+    secrets:
+      GH_TOKEN:
+        required: true
+      GH_APP_ID:
+        required: true
+      GH_APP_TOKEN:
+        required: true
+    outputs:
+      should_reopen:
+        description: "true if parent is a User Story currently in a completed column and must be moved back"
+        value: ${{ jobs.check.outputs.should_reopen }}
+      parent_issue_node_id:
+        description: "GraphQL node_id of the parent issue (User Story)"
+        value: ${{ jobs.check.outputs.parent_issue_node_id }}
+
+permissions:
+  issues: read
+  contents: read
+  repository-projects: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_reopen: ${{ steps.check_parent_status.outputs.should_reopen }}
+      parent_issue_node_id: ${{ steps.parent.outputs.parent_issue_node_id }}
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 🔍 Resolve parent US
+        id: parent
+        uses: avenirs-esr/avenirs-workflows/.github/actions/resolve-parent-issue@main
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          issue_node_id: ${{ inputs.issue_node_id }}
+
+      - name: 🔎 Check if parent US must be moved back to Backlog Ready
+        id: check_parent_status
+        if: ${{ steps.parent.outputs.parent_issue_node_id != '' }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/check-us-needs-reopen@main
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          us_issue_node_id: ${{ steps.parent.outputs.parent_issue_node_id }}
+          project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
+          org: ${{ vars.ORG }}
+          us_issue_type: ${{ vars.US_ISSUE_TYPE }}
+          completed_status_names: "In Review,Recette,Done"
+
+  reopen-us-status:
+    needs: check
+    if: ${{ needs.check.outputs.should_reopen == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      repository-projects: write
+      issues: write
+      contents: read
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 🧭 Move US back to Backlog Ready in Project
+        uses: avenirs-esr/avenirs-workflows/.github/actions/issue-status-update@main
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          issue_node_id: ${{ needs.check.outputs.parent_issue_node_id }}
+          project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
+          target_status_name: ${{ vars.BACKLOG_READY_STATUS_NAME }}
+          org: ${{ vars.ORG }}

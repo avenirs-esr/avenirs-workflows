@@ -1,0 +1,52 @@
+name: "Check US needs reopen"
+description: "Checks whether a User Story currently in a completed status must be moved back to Backlog Ready."
+
+inputs:
+  token:
+    required: true
+    description: "GitHub token with GraphQL access"
+  us_issue_node_id:
+    required: true
+    description: "GraphQL node_id of the parent User Story issue"
+  project_number:
+    required: true
+    description: "Project V2 number"
+  org:
+    required: true
+    description: "GitHub organization"
+  us_issue_type:
+    required: false
+    default: "User Story"
+    description: "Expected issue type name for a User Story"
+  completed_status_names:
+    required: false
+    default: "In Review,Recette,Done"
+    description: "Comma-separated list of statuses considered completed"
+
+outputs:
+  should_reopen:
+    description: "true if the US is in a completed status and should be moved back"
+    value: ${{ steps.run.outputs.should_reopen }}
+  current_status:
+    description: "Current project status of the US"
+    value: ${{ steps.run.outputs.current_status }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js 22 and install dependencies
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 🔍 Check US status
+      id: run
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        US_ISSUE_NODE_ID: ${{ inputs.us_issue_node_id }}
+        PROJECT_NUMBER: ${{ inputs.project_number }}
+        ORG: ${{ inputs.org }}
+        US_ISSUE_TYPE: ${{ inputs.us_issue_type }}
+        COMPLETED_STATUS_NAMES: ${{ inputs.completed_status_names }}
+      run: node "$GITHUB_ACTION_PATH/check-us-needs-reopen.js"
