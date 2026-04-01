@@ -15,6 +15,74 @@ function getCurrentDate() {
   return `${day}/${month}/${year} à ${hours}:${minutes}:${seconds}`;
 }
 
+function getRulesCount(item) {
+  return item.rules ? item.rules.length : 0;
+}
+
+function hasRules(item) {
+  return getRulesCount(item) > 0;
+}
+
+function appendRules(content, rules) {
+  let result = content;
+  for (const rule of rules) {
+    result += `- ${rule}\n`;
+  }
+  return result;
+}
+
+function appendNestedRules(content, rules) {
+  let result = content;
+  result += '  - **🔍️ Règles de gestion:**\n';
+  for (const rule of rules) {
+    result += `    - ${rule}\n`;
+  }
+  return result;
+}
+
+function shouldDisplayEpic(epic) {
+  const rulesCount = getRulesCount(epic);
+
+  if (mode !== 'items-with-rules' || rulesCount > 0) {
+    return true;
+  }
+
+  let hasRulesInSubIssues = false;
+
+  if (epic.subIssues && epic.subIssues.length > 0) {
+    for (const us of epic.subIssues) {
+      if (hasRules(us)) {
+        hasRulesInSubIssues = true;
+        break;
+      }
+    }
+  }
+
+  return hasRulesInSubIssues;
+}
+
+function shouldDisplayUserStory(us) {
+  if (mode === 'items-with-rules' && !hasRules(us)) {
+    return false;
+  }
+
+  return true;
+}
+
+function appendUserStory(content, us) {
+  let result = content;
+  const usStatus = us.fields?.status || 'N/A';
+  const usRulesCount = getRulesCount(us);
+
+  result += `- [#${us.number}](${us.url}): ${us.title} - *${usStatus}* (${us.state})\n`;
+
+  if (mode !== 'no-rules' && usRulesCount > 0) {
+    result = appendNestedRules(result, us.rules);
+  }
+
+  return result;
+}
+
 function generateReport() {
   const jsonData = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
   let content = '';
@@ -48,24 +116,11 @@ function generateReport() {
 
   if (jsonData.epics && jsonData.epics.length > 0) {
     for (const epic of jsonData.epics) {
-      const rulesCount = epic.rules ? epic.rules.length : 0;
+      const rulesCount = getRulesCount(epic);
       const usCount = epic.subIssues ? epic.subIssues.length : 0;
 
-      if(mode === 'items-with-rules' && rulesCount === 0) {
-        let hasRules = false
-
-        if(epic.subIssues && epic.subIssues.length > 0) {
-          for(const us of epic.subIssues) {
-            if(us.rules && us.rules.length > 0) {
-              hasRules = true;
-              break;
-            }
-          }
-        }
-
-        if(!hasRules) {
-          continue;
-        }
+      if (!shouldDisplayEpic(epic)) {
+        continue;
       }
 
       content += `\n### ✨ Epic [#${epic.number}](${epic.url}): ${epic.title}\n\n`;
@@ -73,29 +128,18 @@ function generateReport() {
 
       if (mode !== 'no-rules' && rulesCount > 0) {
         content += '\n#### 🔍️ Règles de gestion\n\n';
-        for (const rule of epic.rules) {
-          content += `- ${rule}\n`;
-        }
+        content = appendRules(content, epic.rules);
       }
 
       if (usCount > 0) {
         content += '\n#### ⚡️ User Stories\n\n';
-        for (const us of epic.subIssues) {
-          const usStatus = us.fields?.status || 'N/A';
-          const usRulesCount = us.rules ? us.rules.length : 0;
 
-          if (mode === 'items-with-rules' && usRulesCount === 0) {
+        for (const us of epic.subIssues) {
+          if (!shouldDisplayUserStory(us)) {
             continue;
           }
 
-          content += `- [#${us.number}](${us.url}): ${us.title} - *${usStatus}* (${us.state})\n`;
-
-          if (mode !== 'no-rules' && usRulesCount > 0) {
-            content += '  - **🔍️ Règles de gestion:**\n';
-            for (const rule of us.rules) {
-              content += `    - ${rule}\n`;
-            }
-          }
+          content = appendUserStory(content, us);
         }
       }
     }
@@ -103,24 +147,14 @@ function generateReport() {
 
   if (jsonData.orphanUserStories && jsonData.orphanUserStories.length > 0) {
     const orphansToDisplay = mode === 'items-with-rules'
-      ? jsonData.orphanUserStories.filter(us => us.rules && us.rules.length > 0)
+      ? jsonData.orphanUserStories.filter((us) => hasRules(us))
       : jsonData.orphanUserStories;
 
     if (orphansToDisplay.length > 0) {
       content += '\n## ❓ User Stories sans Epic\n\n';
 
       for (const us of orphansToDisplay) {
-        const usStatus = us.fields?.status || 'N/A';
-        const usRulesCount = us.rules ? us.rules.length : 0;
-
-        content += `- [#${us.number}](${us.url}): ${us.title} - *${usStatus}* (${us.state})\n`;
-
-        if (mode !== 'no-rules' && usRulesCount > 0) {
-          content += '  - **🔍️ Règles de gestion:**\n';
-          for (const rule of us.rules) {
-            content += `    - ${rule}\n`;
-          }
-        }
+        content = appendUserStory(content, us);
       }
     }
   }
