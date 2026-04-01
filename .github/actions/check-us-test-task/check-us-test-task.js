@@ -1,38 +1,5 @@
-function reqEnv(name) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env ${name}`);
-  return v;
-}
-
-function norm(s) {
-  return String(s ?? "").trim().toLowerCase();
-}
-
-async function gql(token, query, variables) {
-  const res = await fetch("https://api.github.com/graphql", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "check-us-test-task",
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-
-  const text = await res.text();
-  let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new Error(`GraphQL non-JSON response: HTTP ${res.status} ${text}`);
-  }
-
-  if (!res.ok || json.errors) {
-    throw new Error(`GraphQL error: ${JSON.stringify(json.errors ?? json)}`);
-  }
-
-  return json.data;
-}
+const { reqEnv, norm, appendOutput } = require("../_shared/utils");
+const { gql } = require("../_shared/github");
 
 async function hasTestSubTask(token, parentIssueNodeId) {
   let after = null;
@@ -60,7 +27,13 @@ async function hasTestSubTask(token, parentIssueNodeId) {
   `;
 
   do {
-    const data = await gql(token, query, { parentIssueNodeId, after });
+    const data = await gql(
+      token,
+      query,
+      { parentIssueNodeId, after },
+      { userAgent: "check-us-test-task" }
+    );
+
     const parent = data?.node;
 
     if (!parent || parent.__typename !== "Issue") {
@@ -68,7 +41,10 @@ async function hasTestSubTask(token, parentIssueNodeId) {
     }
 
     const subIssues = parent.subIssues?.nodes ?? [];
-    const found = subIssues.some((subIssue) => norm(subIssue.title).includes("[test]"));
+    const found = subIssues.some((subIssue) =>
+      norm(subIssue.title).includes("[test]")
+    );
+
     if (found) {
       return { found: true, title: parent.title };
     }
@@ -78,16 +54,21 @@ async function hasTestSubTask(token, parentIssueNodeId) {
       : null;
   } while (after);
 
-  const finalData = await gql(token, `
-    query($parentIssueNodeId: ID!) {
-      node(id: $parentIssueNodeId) {
-        __typename
-        ... on Issue {
-          title
+  const finalData = await gql(
+    token,
+    `
+      query($parentIssueNodeId: ID!) {
+        node(id: $parentIssueNodeId) {
+          __typename
+          ... on Issue {
+            title
+          }
         }
       }
-    }
-  `, { parentIssueNodeId });
+    `,
+    { parentIssueNodeId },
+    { userAgent: "check-us-test-task" }
+  );
 
   return {
     found: false,
@@ -98,18 +79,14 @@ async function hasTestSubTask(token, parentIssueNodeId) {
 (async () => {
   const token = reqEnv("TOKEN");
   const parentIssueNodeId = reqEnv("PARENT_ISSUE_NODE_ID");
-  const githubOutput = process.env.GITHUB_OUTPUT;
 
   const result = await hasTestSubTask(token, parentIssueNodeId);
 
   console.log(`Parent issue: ${result.title} (${parentIssueNodeId})`);
   console.log(`Has [TEST] sub-task: ${result.found}`);
 
-  if (githubOutput) {
-    const fs = await import("node:fs");
-    fs.appendFileSync(githubOutput, `test_task=${result.found ? "true" : "false"}\n`);
-  }
-})().catch((e) => {
-  console.error("❌ Error:", e);
+  appendOutput("test_task", result.found ? "true" : "false");
+})().catch((error) => {
+  console.error("❌ Error:", error);
   process.exit(1);
 });

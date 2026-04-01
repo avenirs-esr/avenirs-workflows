@@ -1,77 +1,20 @@
-function norm(s) {
-  return String(s ?? "")
-    .replace(/\p{Extended_Pictographic}/gu, "")
-    .toLowerCase()
-    .trim();
-}
-
-function reqEnv(name) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env ${name}`);
-  return v;
-}
-
-async function gql(token, query, variables) {
-  const res = await fetch("https://api.github.com/graphql", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "comment-us-in-column",
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-
-  const text = await res.text();
-  let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new Error(`GraphQL non-JSON response: HTTP ${res.status} ${text}`);
-  }
-
-  if (!res.ok || json.errors) {
-    throw new Error(`GraphQL error: ${JSON.stringify(json.errors ?? json)}`);
-  }
-  return json.data;
-}
-
-async function restCreateComment(token, owner, repo, issue_number, body) {
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${issue_number}/comments`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "comment-us-in-column",
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-    body: JSON.stringify({ body }),
-  });
-
-  const text = await res.text();
-  let json;
-  try {
-    json = text ? JSON.parse(text) : {};
-  } catch {
-    json = { raw: text };
-  }
-
-  if (!res.ok) {
-    throw new Error(`REST create comment failed: HTTP ${res.status} ${JSON.stringify(json)}`);
-  }
-  return json;
-}
+const { reqEnv, norm } = require("../_shared/utils");
+const {
+  gql,
+  restPost,
+  findProjectSingleSelectField,
+  findSingleSelectOption,
+  findSingleSelectFieldValue,
+} = require("../_shared/github");
 
 (async () => {
   const token = reqEnv("TOKEN");
   const org = reqEnv("ORG");
   const projectNumber = Number(reqEnv("PROJECT_NUMBER"));
-
-  const statusFieldName = "Status";
   const fromStatusName = reqEnv("FROM_STATUS_NAME").trim();
-  const wantedUsType = (process.env.US_ISSUE_TYPE || "User Story").trim();
   const body = reqEnv("BODY");
+  const wantedUsType = (process.env.US_ISSUE_TYPE || "User Story").trim();
+  const statusFieldName = "Status";
 
   const query = `
     query($org: String!, $number: Int!, $after: String) {
@@ -119,27 +62,36 @@ async function restCreateComment(token, owner, repo, issue_number, body) {
 
   let after = null;
   let statusFieldId = null;
-
-  const targetStatusNorm = norm(fromStatusName);
-  const statusFieldNameNorm = norm(statusFieldName);
-
   const targets = [];
 
   do {
-    const data = await gql(token, query, { org, number: projectNumber, after });
+    const data = await gql(token, query, { org, number: projectNumber, after }, {
+      userAgent: "comment-us-in-column",
+    });
+
     const project = data?.organization?.projectV2;
-    if (!project?.id) throw new Error(`ProjectV2 not found or inaccessible: org=${org} number=${projectNumber}`);
+    if (!project?.id) {
+      throw new Error(`ProjectV2 not found or inaccessible: org=${org} number=${projectNumber}`);
+    }
 
     if (!statusFieldId) {
-      const fields = project.fields?.nodes ?? [];
-      const statusField = fields.find(
-        (f) => f.__typename === "ProjectV2SingleSelectField" && norm(f.name) === statusFieldNameNorm
-      );
-      if (!statusField?.id) throw new Error(`Single-select field "${statusFieldName}" not found in Project #${projectNumber}`);
-      statusFieldId = statusField.id;
+      const statusField = findProjectSingleSelectField(project.fields?.nodes ?? [], statusFieldName, {
+        stripEmoji: true,
+      });
 
-      const hasOption = (statusField.options ?? []).some((o) => norm(o.name) === targetStatusNorm);
-      if (!hasOption) throw new Error(`Option "${fromStatusName}" not found in field "${statusFieldName}"`);
+      if (!statusField?.id) {
+        throw new Error(`Single-select field "${statusFieldName}" not found in Project #${projectNumber}`);
+      }
+
+      const fromStatusOption = findSingleSelectOption(statusField, fromStatusName, {
+        stripEmoji: true,
+      });
+
+      if (!fromStatusOption?.id) {
+        throw new Error(`Option "${fromStatusName}" not found in field "${statusFieldName}"`);
+      }
+
+      statusFieldId = statusField.id;
     }
 
     const items = project.items?.nodes ?? [];
@@ -147,15 +99,14 @@ async function restCreateComment(token, owner, repo, issue_number, body) {
       const issue = item?.content;
       if (!issue || issue.__typename !== "Issue") continue;
 
-      const issueTypeName = issue.issueType?.name ?? "";
-      if (norm(issueTypeName) !== norm(wantedUsType)) continue;
+      if (norm(issue.issueType?.name, { stripEmoji: true }) !== norm(wantedUsType, { stripEmoji: true })) {
+        continue;
+      }
 
-      const fvs = item.fieldValues?.nodes ?? [];
-      const statusValue = fvs.find(
-        (fv) => fv.__typename === "ProjectV2ItemFieldSingleSelectValue" && fv.field?.id === statusFieldId
-      );
-      const currentStatus = statusValue?.name ?? "";
-      if (norm(currentStatus) !== targetStatusNorm) continue;
+      const statusValue = findSingleSelectFieldValue(item.fieldValues?.nodes ?? [], statusFieldId);
+      if (norm(statusValue?.name ?? "", { stripEmoji: true }) !== norm(fromStatusName, { stripEmoji: true })) {
+        continue;
+      }
 
       const owner = issue.repository?.owner?.login;
       const repo = issue.repository?.name;
@@ -166,25 +117,34 @@ async function restCreateComment(token, owner, repo, issue_number, body) {
       }
     }
 
-    after = project.items?.pageInfo?.hasNextPage ? project.items.pageInfo.endCursor : null;
+    after = project.items?.pageInfo?.hasNextPage
+      ? project.items.pageInfo.endCursor
+      : null;
   } while (after);
 
   const uniq = new Map();
-  for (const t of targets) uniq.set(`${t.owner}/${t.repo}#${t.number}`, t);
+  for (const target of targets) {
+    uniq.set(`${target.owner}/${target.repo}#${target.number}`, target);
+  }
 
   let ok = 0;
-  for (const t of uniq.values()) {
+  for (const target of uniq.values()) {
     try {
-      await restCreateComment(token, t.owner, t.repo, t.number, body);
+      await restPost(
+        token,
+        `https://api.github.com/repos/${target.owner}/${target.repo}/issues/${target.number}/comments`,
+        { body },
+        { userAgent: "comment-us-in-column" }
+      );
       ok++;
-      console.log(`✅ Commented ${t.owner}/${t.repo}#${t.number}`);
-    } catch (e) {
-      console.error(`❌ Failed to comment ${t.owner}/${t.repo}#${t.number}:`, e?.message ?? e);
+      console.log(`✅ Commented ${target.owner}/${target.repo}#${target.number}`);
+    } catch (error) {
+      console.error(`❌ Failed to comment ${target.owner}/${target.repo}#${target.number}:`, error?.message ?? error);
     }
   }
 
   console.log(`Done. Commented: ${ok}/${uniq.size}`);
-})().catch((e) => {
-  console.error("❌ Error:", e);
+})().catch((error) => {
+  console.error("❌ Error:", error);
   process.exit(1);
 });

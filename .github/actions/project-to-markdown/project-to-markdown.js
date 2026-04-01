@@ -1,10 +1,16 @@
-const fs = require('fs');
+const {
+  reqEnv,
+  norm,
+  ensureDir,
+  writeTextFile,
+} = require("../_shared/utils");
+const { gql } = require("../_shared/github");
 
-const token   = process.env.TOKEN;
-const org     = process.env.ORG;
-const number  = parseInt(process.env.PROJECT_NUMBER,10);
-const profileLabel = process.env.PROFILE_LABEL;
-const epicLabel    = process.env.EPIC_LABEL;
+const token = reqEnv("TOKEN");
+const org = reqEnv("ORG");
+const number = parseInt(reqEnv("PROJECT_NUMBER"), 10);
+const profileLabel = reqEnv("PROFILE_LABEL");
+const epicLabel = reqEnv("EPIC_LABEL");
 
 const query = `
 query ($org: String!, $number: Int!, $after: String) {
@@ -85,51 +91,52 @@ query ($org: String!, $number: Int!, $after: String) {
 }
 `;
 
-async function gql(variables){
-  const apiResponse = await fetch('https://api.github.com/graphql',{
-    method:'POST',
-    headers:{
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'us-table-bot',
-      'GraphQL-Features': 'tracked_issues_graphql_access, sub_issues'
-    },
-    body: JSON.stringify({ query, variables })
-  });
-  const responseText = await apiResponse.text();
-  let jsonResponse; try { jsonResponse = JSON.parse(responseText); } catch(e){ throw new Error(`HTTP ${apiResponse.status} ${responseText}`); }
-  if (!apiResponse.ok || jsonResponse.errors) throw new Error(JSON.stringify(jsonResponse.errors||responseText));
-  return jsonResponse.data;
+const epicWantedSet = new Set(
+  String(epicLabel)
+    .split(",")
+    .map((label) => normalizeLabel(label))
+    .filter(Boolean)
+);
+
+const doneDot = "✅";
+const inRecetteDot = "🏁";
+const inProgressDot = "⏳";
+const todoDot = "📝";
+const wontDot = "❌";
+
+function normalizeLabel(value) {
+  return norm(value).replace(/\s*:\s*/g, ":");
 }
 
-const norm = s => (s ?? "").toLowerCase().replace(/\s*:\s*/g, ":").trim();
-const labelNames = n => (n?.labels?.nodes ?? []).map(x => x.name);
-const epicWantedSet = new Set(String(epicLabel).split(',').map(s=>norm(s.trim())).filter(Boolean));
-const escapeCell = s => String(s??'').replace(/\|/g,'\\|');
-const doneDot = '✅';
-const inRecetteDot = '🏁';
-const inProgressDot = '⏳';
-const todoDot = '📝';
-const wontDot = '❌';
+function getLabelNames(issueNode) {
+  return (issueNode?.labels?.nodes ?? []).map((node) => node.name);
+}
 
-function parseProfile(labels){
+function escapeCell(value) {
+  return String(value ?? "").replace(/\|/g, "\\|");
+}
+
+function parseProfile(labels) {
   const regex = /^Profil\s*:\s*/i;
-  const hit = labels.find(n => regex.test(n));
-  return hit ? hit.split(':')[1].trim() : '';
+  const hit = labels.find((label) => regex.test(label));
+  return hit ? hit.split(":")[1].trim() : "";
 }
 
 function parseImprovementRef(title) {
-  const version_regex = /\bv\s*(\d+)\b[^#]*#\s*(\d+)/i;
-  const matchArray = String(title).match(version_regex);
-  return matchArray ? { version: parseInt(matchArray[1],10), base: parseInt(matchArray[2],10) } : null;
+  const versionRegex = /\bv\s*(\d+)\b[^#]*#\s*(\d+)/i;
+  const match = String(title).match(versionRegex);
+  return match
+    ? { version: parseInt(match[1], 10), base: parseInt(match[2], 10) }
+    : null;
 }
 
-function statusToDot(name){
-  const normalizedName = String(name ?? '')
+function statusToDot(name) {
+  const normalizedName = String(name ?? "")
     .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[_\-’'.,:;()]/g, ' ')
-    .replace(/\s+/g, ' ')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[_\-’'.,:;()]/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 
   if (/(^|\b)(done)(\b|$)/.test(normalizedName)) return doneDot;
@@ -139,45 +146,95 @@ function statusToDot(name){
   return todoDot;
 }
 
-function getFieldsForProject(issueNode, projectNumber){
-  const item = issueNode.projectItems?.nodes?.find(pi => pi.project?.number === projectNumber);
+function getFieldsForProject(issueNode, projectNumber) {
+  const item = issueNode.projectItems?.nodes?.find(
+    (projectItem) => projectItem.project?.number === projectNumber
+  );
+
   if (!item) return {};
-  const out = {};
+
+  const output = {};
+
   for (const fieldValue of item.fieldValues?.nodes ?? []) {
-    if (fieldValue.__typename === 'ProjectV2ItemFieldSingleSelectValue') {
-      const fname = String(fieldValue.field?.name || '').trim().toLowerCase();
-      if (fname === 'status') out.status = fieldValue.name || '';
-    } else if (fieldValue.__typename === 'ProjectV2ItemFieldIterationValue') {
-      const fname = String(fieldValue.field?.name || '').trim().toLowerCase();
-      if (fname === 'sprint') out.sprint = fieldValue.title || '';
+    const fieldName = String(fieldValue.field?.name || "").trim().toLowerCase();
+
+    if (fieldValue.__typename === "ProjectV2ItemFieldSingleSelectValue") {
+      if (fieldName === "status") output.status = fieldValue.name || "";
+    } else if (fieldValue.__typename === "ProjectV2ItemFieldIterationValue") {
+      if (fieldName === "sprint") output.sprint = fieldValue.title || "";
     }
   }
-  return out;
+
+  return output;
 }
 
-(async ()=>{
-  let after=null, items=[];
-  do{
-    const graphQLResponse = await gql({org, number, after});
-    const projectData = graphQLResponse?.organization?.projectV2;
-    if (!projectData) throw new Error('Project not found or inaccessible');
+function hasEpicLabel(issueNode) {
+  const labels = new Set(getLabelNames(issueNode).map(normalizeLabel));
+  return [...epicWantedSet].some((wanted) => labels.has(wanted));
+}
+
+function isIgnoredStatus(status) {
+  const normalizedStatus = String(status ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[_\-’'.,:;()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return normalizedStatus === "" || /(^|\b)(backlog not ready|a refiner)(\b|$)/.test(normalizedStatus);
+}
+
+function buildTableContent(epicTitle, epicUrl, rows) {
+  const legend = `*Légende :* ${doneDot} Terminé · ${inRecetteDot} En Recette · ${inProgressDot} En cours/Review · ${todoDot} À faire · ${wontDot} Won’t do`;
+  const title = `#### Tableau de fonctionnalités de l'épic : **${
+    epicUrl ? `[${escapeCell(epicTitle)}](${epicUrl})` : escapeCell(epicTitle)
+  }**`;
+
+  let content = `${title}\n\n${legend}\n\n| Profil | US | Sprint | État | Mise à jour |\n|---|---|:--:|:--:|---|\n`;
+
+  for (const row of rows) {
+    content += `| ${row.profile} | ${row.us} | ${row.sprint} | ${row.etat} | ${row.maj} |\n`;
+  }
+
+  return content;
+}
+
+(async () => {
+  let after = null;
+  const items = [];
+
+  do {
+    const response = await gql(token, query, { org, number, after }, {
+      userAgent: "us-table-bot",
+      extraHeaders: {
+        "GraphQL-Features": "tracked_issues_graphql_access, sub_issues",
+      },
+    });
+
+    const projectData = response?.organization?.projectV2;
+    if (!projectData) {
+      throw new Error("Project not found or inaccessible");
+    }
+
     const page = projectData.items;
     items.push(...page.nodes);
     after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
-  } while(after);
+  } while (after);
 
   const childToEpicNumber = new Map();
   const epicTitleByNum = new Map();
-  const epicUrlByNum   = new Map();
+  const epicUrlByNum = new Map();
+
   for (const item of items) {
     const content = item.content;
-    if (!content || content.__typename !== 'Issue') continue;
-    const labs = new Set(labelNames(content).map(norm));
-    const isEpic = [...epicWantedSet].some(w => labs.has(w));
-    if (!isEpic) continue;
+    if (!content || content.__typename !== "Issue") continue;
+    if (!hasEpicLabel(content)) continue;
+
     epicTitleByNum.set(content.number, content.title);
     epicUrlByNum.set(content.number, content.url);
-    for (const child of (content.subIssues?.nodes ?? [])) {
+
+    for (const child of content.subIssues?.nodes ?? []) {
       childToEpicNumber.set(child.url, content.number);
     }
   }
@@ -185,71 +242,71 @@ function getFieldsForProject(issueNode, projectNumber){
   const improvementsByBase = new Map();
   for (const item of items) {
     const content = item.content;
-    if (!content || content.__typename !== 'Issue') continue;
+    if (!content || content.__typename !== "Issue") continue;
+
     const ref = parseImprovementRef(content.title);
-    if (ref) {
-      if (!improvementsByBase.has(ref.base)) improvementsByBase.set(ref.base, []);
-      improvementsByBase.get(ref.base).push(escapeCell(content.title));
+    if (!ref) continue;
+
+    if (!improvementsByBase.has(ref.base)) {
+      improvementsByBase.set(ref.base, []);
     }
+    improvementsByBase.get(ref.base).push(escapeCell(content.title));
   }
 
   const groups = new Map();
 
-  for (const item of items){
+  for (const item of items) {
     const content = item.content;
-    if (!content || content.__typename!=='Issue') continue;
+    if (!content || content.__typename !== "Issue") continue;
 
-    const labels = labelNames(content);
+    const labels = getLabelNames(content);
     if (!labels.includes(profileLabel)) continue;
     if (parseImprovementRef(content.title)) continue;
 
-    let epicNum = null;
-    if (content.parent?.number) {
-      epicNum = content.parent.number;
-    } else {
-      epicNum = childToEpicNumber.get(content.url) || null;
-    }
+    const epicNumber = content.parent?.number
+      ? content.parent.number
+      : childToEpicNumber.get(content.url) || null;
 
     const cofolio = getFieldsForProject(content, 16);
-    const normalizedStatus = String(cofolio.status ?? '')
-      .toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[_\-’'.,:;()]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    if (isIgnoredStatus(cofolio.status)) continue;
 
-    if (normalizedStatus === '' || /(^|\b)(backlog not ready|a refiner)(\b|$)/.test(normalizedStatus)) {
-      continue;
-    }
     const row = {
-      profile: parseProfile(labels) || '—',
+      profile: parseProfile(labels) || "—",
       us: content.url ? `[${escapeCell(content.title)}](${content.url})` : escapeCell(content.title),
-      sprint: cofolio.sprint || '—',
+      sprint: cofolio.sprint || "—",
       etat: statusToDot(cofolio.status),
-      maj: (improvementsByBase.get(content.number) || []).join(' ; ')
+      maj: (improvementsByBase.get(content.number) || []).join(" ; "),
     };
 
-    const key = epicNum ? String(epicNum) : 'none';
-    if (!groups.has(key)) groups.set(key, []);
+    const key = epicNumber ? String(epicNumber) : "none";
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
     groups.get(key).push(row);
   }
 
-  for (const [k, arr] of groups) {
-    arr.sort((a,b)=> a.us.localeCompare(b.us, 'fr', { sensitivity:'base', numeric:true }));
+  for (const [, rows] of groups) {
+    rows.sort((a, b) => a.us.localeCompare(b.us, "fr", {
+      sensitivity: "base",
+      numeric: true,
+    }));
   }
 
-  fs.mkdirSync('epic_tables', { recursive: true });
-  const LEGEND = `*Légende :* ${doneDot} Terminé · ${inRecetteDot} En Recette · ${inProgressDot} En cours/Review · ${todoDot} À faire · ${wontDot} Won’t do`;
-  for (const [key, arr] of groups) {
-    const epicNum = key === 'none' ? null : Number(key);
-    const epicTitle = epicNum ? (epicTitleByNum.get(epicNum) || `Epic #${epicNum}`) : 'Sans Epic';
-    const epicUrl   = epicNum ? epicUrlByNum.get(epicNum) : null;
-    const TITLE = `#### Tableau de fonctionnalités de l'épic : **${
-      epicUrl ? `[${escapeCell(epicTitle)}](${epicUrl})` : escapeCell(epicTitle)
-    }**`;
-    let tableContent = `${TITLE}\n\n${LEGEND}\n\n| Profil | US | Sprint | État | Mise à jour |\n|---|---|:--:|:--:|---|\n`;
-    for (const row of arr) tableContent += `| ${row.profile} | ${row.us} | ${row.sprint} | ${row.etat} | ${row.maj} |\n`;
-    const name = key === 'none' ? 'epic-none.md' : `epic-${key}.md`;
-    fs.writeFileSync(`epic_tables/${name}`, tableContent, 'utf8');
+  ensureDir("epic_tables");
+
+  for (const [key, rows] of groups) {
+    const epicNumber = key === "none" ? null : Number(key);
+    const epicTitle = epicNumber
+      ? epicTitleByNum.get(epicNumber) || `Epic #${epicNumber}`
+      : "Sans Epic";
+    const epicUrl = epicNumber ? epicUrlByNum.get(epicNumber) : null;
+
+    const content = buildTableContent(epicTitle, epicUrl, rows);
+    const filename = key === "none" ? "epic-none.md" : `epic-${key}.md`;
+
+    writeTextFile(`epic_tables/${filename}`, content);
   }
-})().catch(e=>{ console.error(e); process.exit(1); });
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

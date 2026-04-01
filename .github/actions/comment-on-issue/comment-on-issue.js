@@ -1,62 +1,5 @@
-function reqEnv(name) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env ${name}`);
-  return v;
-}
-
-async function gql(token, query, variables) {
-  const res = await fetch("https://api.github.com/graphql", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "comment-single-issue",
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-
-  const text = await res.text();
-  let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new Error(`GraphQL non-JSON response: HTTP ${res.status} ${text}`);
-  }
-
-  if (!res.ok || json.errors) {
-    throw new Error(`GraphQL error: ${JSON.stringify(json.errors ?? json)}`);
-  }
-
-  return json.data;
-}
-
-async function restCreateComment(token, owner, repo, issueNumber, body) {
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/comments`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "comment-single-issue",
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-    body: JSON.stringify({ body }),
-  });
-
-  const text = await res.text();
-  let json;
-  try {
-    json = text ? JSON.parse(text) : {};
-  } catch {
-    json = { raw: text };
-  }
-
-  if (!res.ok) {
-    throw new Error(`REST create comment failed: HTTP ${res.status} ${JSON.stringify(json)}`);
-  }
-
-  return json;
-}
+const { reqEnv } = require("../_shared/utils");
+const { gql, restPost } = require("../_shared/github");
 
 (async () => {
   const token = reqEnv("TOKEN");
@@ -81,7 +24,7 @@ async function restCreateComment(token, owner, repo, issueNumber, body) {
     }
   `;
 
-  const data = await gql(token, query, { issueNodeId });
+  const data = await gql(token, query, { issueNodeId }, "comment-single-issue");
   const issue = data?.node;
 
   if (!issue || issue.__typename !== "Issue") {
@@ -96,7 +39,13 @@ async function restCreateComment(token, owner, repo, issueNumber, body) {
     throw new Error(`Unable to resolve repository or issue number for node ${issueNodeId}`);
   }
 
-  await restCreateComment(token, owner, repo, number, body);
+  await restPost(
+    token,
+    `https://api.github.com/repos/${owner}/${repo}/issues/${number}/comments`,
+    { body },
+    "comment-single-issue"
+  );
+
   console.log(`✅ Commented ${owner}/${repo}#${number}`);
 })().catch((e) => {
   console.error("❌ Error:", e);

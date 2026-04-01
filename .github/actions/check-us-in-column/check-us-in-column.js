@@ -1,47 +1,10 @@
-const fs = require("fs");
-
-function appendOutput(key, value) {
-  if (!process.env.GITHUB_OUTPUT) return;
-  fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
-}
-
-function norm(s) {
-  return String(s ?? "")
-    .replace(/\p{Extended_Pictographic}/gu, "") // ignore emojis like 🏁
-    .toLowerCase()
-    .trim();
-}
-
-function reqEnv(name) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env ${name}`);
-  return v;
-}
-
-async function gql(token, query, variables) {
-  const res = await fetch("https://api.github.com/graphql", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "should-run-if-us-in-column",
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-
-  const text = await res.text();
-  let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new Error(`GraphQL non-JSON response: HTTP ${res.status} ${text}`);
-  }
-
-  if (!res.ok || json.errors) {
-    throw new Error(`GraphQL error: ${JSON.stringify(json.errors ?? json)}`);
-  }
-  return json.data;
-}
+const { reqEnv, norm, appendOutput } = require("../_shared/utils");
+const {
+  gql,
+  findProjectSingleSelectField,
+  findSingleSelectOption,
+  findSingleSelectFieldValue,
+} = require("../_shared/github");
 
 (async () => {
   appendOutput("should_run", "false");
@@ -88,7 +51,12 @@ async function gql(token, query, variables) {
                   __typename
                   ... on ProjectV2ItemFieldSingleSelectValue {
                     name
-                    field { ... on ProjectV2SingleSelectField { id name } }
+                    field {
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                      }
+                    }
                   }
                 }
               }
@@ -103,13 +71,13 @@ async function gql(token, query, variables) {
   let after = null;
   let project = null;
   let statusFieldId = null;
-  let targetOptionNameNorm = norm(targetStatusName);
-  let statusFieldNameNorm = norm(statusFieldName);
-
   let matchingCount = 0;
 
   do {
-    const data = await gql(token, query, { org, number: projectNumber, after });
+    const data = await gql(token, query, { org, number: projectNumber, after }, {
+      userAgent: "should-run-if-us-in-column",
+    });
+
     project = data?.organization?.projectV2;
     if (!project?.id) {
       throw new Error(`ProjectV2 not found or inaccessible: org=${org} number=${projectNumber}`);
@@ -117,21 +85,24 @@ async function gql(token, query, variables) {
 
     if (!statusFieldId) {
       const fields = project.fields?.nodes ?? [];
-      const statusField = fields.find(
-        (f) =>
-          f.__typename === "ProjectV2SingleSelectField" &&
-          norm(f.name) === statusFieldNameNorm
-      );
+
+      const statusField = findProjectSingleSelectField(fields, statusFieldName, {
+        stripEmoji: true,
+      });
 
       if (!statusField?.id) {
         throw new Error(`Single-select field "${statusFieldName}" not found in Project V2 #${projectNumber}.`);
       }
-      statusFieldId = statusField.id;
 
-      const hasOption = (statusField.options ?? []).some((o) => norm(o.name) === targetOptionNameNorm);
-      if (!hasOption) {
+      const targetOption = findSingleSelectOption(statusField, targetStatusName, {
+        stripEmoji: true,
+      });
+
+      if (!targetOption?.id) {
         throw new Error(`Option "${targetStatusName}" not found in field "${statusFieldName}".`);
       }
+
+      statusFieldId = statusField.id;
     }
 
     const items = project.items?.nodes ?? [];
@@ -140,22 +111,21 @@ async function gql(token, query, variables) {
       if (!issue || issue.__typename !== "Issue") continue;
 
       const issueTypeName = issue.issueType?.name ?? "";
-      if (norm(issueTypeName) !== norm(wantedUsType)) continue;
+      if (norm(issueTypeName, { stripEmoji: true }) !== norm(wantedUsType, { stripEmoji: true })) {
+        continue;
+      }
 
-      const fvs = item.fieldValues?.nodes ?? [];
-      const statusValue = fvs.find(
-        (fv) =>
-          fv.__typename === "ProjectV2ItemFieldSingleSelectValue" &&
-          fv.field?.id === statusFieldId
-      );
-
+      const statusValue = findSingleSelectFieldValue(item.fieldValues?.nodes ?? [], statusFieldId);
       const currentStatus = statusValue?.name ?? "";
-      if (norm(currentStatus) === targetOptionNameNorm) {
+
+      if (norm(currentStatus, { stripEmoji: true }) === norm(targetStatusName, { stripEmoji: true })) {
         matchingCount++;
       }
     }
 
-    after = project.items?.pageInfo?.hasNextPage ? project.items.pageInfo.endCursor : null;
+    after = project.items?.pageInfo?.hasNextPage
+      ? project.items.pageInfo.endCursor
+      : null;
   } while (after);
 
   appendOutput("should_run", matchingCount > 0 ? "true" : "false");
@@ -163,8 +133,8 @@ async function gql(token, query, variables) {
   console.log(
     `✅ Found ${matchingCount} "${wantedUsType}" issue(s) in "${targetStatusName}" (Project #${projectNumber}, field "${statusFieldName}").`
   );
-})().catch((e) => {
-  console.error("❌ Error:", e);
+})().catch((error) => {
+  console.error("❌ Error:", error);
   appendOutput("should_run", "false");
   process.exit(1);
 });
