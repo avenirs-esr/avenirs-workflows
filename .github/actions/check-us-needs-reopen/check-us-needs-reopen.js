@@ -22,13 +22,7 @@ async function gql(token, query, variables) {
     body: JSON.stringify({ query, variables }),
   });
 
-  const text = await res.text();
-  let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new Error(`GraphQL non-JSON response: HTTP ${res.status} ${text}`);
-  }
+  const json = await res.json();
 
   if (!res.ok || json.errors) {
     throw new Error(`GraphQL error: ${JSON.stringify(json.errors ?? json)}`);
