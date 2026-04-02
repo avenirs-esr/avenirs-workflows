@@ -129,11 +129,30 @@ runs:
         EMPTY_DATASET_ACCESS_TOKEN: ${{ inputs.empty_dataset_access_token }}
         MSW_MODE_ON: ${{ inputs.enable_msw }}
 
+    - name: 📁 Prepare Playwright report bundle
+      if: ${{ always() && inputs.upload_report == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e
+      run: |
+        rm -rf gh-pages-playwright-report
+        mkdir -p gh-pages-playwright-report
+
+        if [ -d "playwright-report" ]; then
+          cp -R playwright-report/. gh-pages-playwright-report/
+        fi
+
+        if [ -d "test-results" ]; then
+          cp -R test-results gh-pages-playwright-report/test-results
+        fi
+
+        echo "Prepared Playwright bundle:"
+        find gh-pages-playwright-report -maxdepth 4 -type f | sort || true
+
     - name: 📦 Upload Playwright Report
       if: ${{ always() && inputs.upload_report == 'true' }}
       uses: actions/upload-artifact@v4
       with:
         name: playwright-report
-        path: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e/playwright-report
+        path: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e/gh-pages-playwright-report
         if-no-files-found: ignore
         retention-days: 7
