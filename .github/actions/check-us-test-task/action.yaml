@@ -1,5 +1,5 @@
 name: "Check US test task"
-description: "Checks whether a User Story contains at least one sub-task with [TEST] in its title."
+description: "Checks whether a User Story contains at least one sub-task with [QUALIF] in its title."
 
 inputs:
   token:
@@ -11,7 +11,7 @@ inputs:
 
 outputs:
   test_task:
-    description: "true if parent US contains a sub-task with [TEST] in title"
+    description: "true if parent US contains a sub-task with [QUALIF] in title"
     value: ${{ steps.run.outputs.test_task }}
 
 runs:
@@ -22,7 +22,7 @@ runs:
       with:
         run-npm-command: "false"
 
-    - name: 🔍 Check [TEST] sub-task
+    - name: 🔍 Check [QUALIF] sub-task
       id: run
       shell: bash
       env:

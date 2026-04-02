@@ -14,16 +14,24 @@ on:
         required: true
       GH_APP_TOKEN:
         required: true
+      ROCKETCHAT_API_URL:
+        required: true
+      ROCKETCHAT_TOKEN:
+        required: true
+      ROCKETCHAT_USER_ID:
+        required: true
     outputs:
       should_run:
         description: "true if parent is User Story AND all its sub-issues are closed"
         value: ${{ jobs.check.outputs.should_run }}
       test_task:
-        description: "true if parent US contains at least one sub-task with [TEST] in title"
+        description: "true if parent US contains at least one sub-task with [QUALIF] in title"
         value: ${{ jobs.check.outputs.test_task }}
       parent_issue_node_id:
         description: "GraphQL node_id of the parent issue (User Story)"
         value: ${{ jobs.check.outputs.parent_issue_node_id }}
+      parent_issue_number:
+        value: ${{ jobs.check.outputs.parent_issue_number }}
 
 permissions:
   issues: read
@@ -37,6 +45,7 @@ jobs:
       should_run: ${{ steps.check_us.outputs.should_run }}
       test_task: ${{ steps.check_test_task.outputs.test_task }}
       parent_issue_node_id: ${{ steps.parent.outputs.parent_issue_node_id }}
+      parent_issue_number: ${{ steps.parent.outputs.parent_issue_number }}
 
     steps:
       - name: 👮‍♂️ Check if parent US is complete
@@ -64,7 +73,7 @@ jobs:
           token: ${{ steps.app.outputs.app-token }}
           issue_node_id: ${{ inputs.issue_node_id }}
 
-      - name: 🔍 Check if parent US has a [TEST] sub-task
+      - name: 🔍 Check if parent US has a [QUALIF] sub-task
         id: check_test_task
         if: ${{ steps.check_us.outputs.should_run == 'true' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/check-us-test-task@main
@@ -90,14 +99,14 @@ jobs:
           app_private_key: ${{ secrets.GH_APP_TOKEN }}
           owner: ${{ vars.ORG }}
 
-      - name: 💬 Comment missing [TEST] task on parent US
+      - name: 💬 Comment missing [QUALIF] task on parent US
         uses: avenirs-esr/avenirs-workflows/.github/actions/comment-on-issue@main
         with:
           token: ${{ steps.app.outputs.app-token }}
           issue_node_id: ${{ needs.check.outputs.parent_issue_node_id }}
           body: |
             ⚠️ Cette User Story ne peut pas être considérée comme complète car aucune sous-tâche de test n’a été détectée.
-            Merci d’ajouter une sub-task dont le titre contient `[TEST]`.
+            Merci d’ajouter une sub-task dont le titre contient `[QUALIF]`.
 
   update-us-status:
     needs: check
