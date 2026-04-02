@@ -1,0 +1,61 @@
+name: 'Rocket.Chat Notify'
+description: 'Post a message to a Rocket.Chat channel using personal token'
+
+inputs:
+  api-url:
+    description: 'Rocket.Chat base API URL (ex: https://chat.xxx.com)'
+    required: true
+  auth-token:
+    description: 'Rocket.Chat personal access token'
+    required: true
+  user-id:
+    description: 'Rocket.Chat user ID'
+    required: true
+  channel:
+    description: 'Channel name (ex: #ci) or roomId'
+    required: true
+  message:
+    description: 'Message to send'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install jq
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y jq
+
+    - name: Post message to Rocket.Chat via API
+      shell: bash
+      env:
+        API_URL: ${{ inputs.api-url }}
+        AUTH_TOKEN: ${{ inputs.auth-token }}
+        USER_ID: ${{ inputs.user-id }}
+        CHANNEL: ${{ inputs.channel }}
+        MESSAGE: ${{ inputs.message }}
+      run: |
+        set -euo pipefail
+
+        payload="$(jq -n \
+          --arg channel "$CHANNEL" \
+          --arg text "$MESSAGE" \
+          '{
+            channel: $channel,
+            text: $text
+          }
+        ')"
+
+        response="$(curl -sS -X POST "$API_URL/api/v1/chat.postMessage" \
+          -H "X-Auth-Token: $AUTH_TOKEN" \
+          -H "X-User-Id: $USER_ID" \
+          -H "Content-Type: application/json" \
+          -d "$payload")"
+
+        echo "Rocket.Chat response: $response"
+
+        success=$(echo "$response" | jq -r '.success // false')
+
+        if [ "$success" != "true" ]; then
+          echo "❌ Rocket.Chat API call failed"
+          exit 1
+        fi

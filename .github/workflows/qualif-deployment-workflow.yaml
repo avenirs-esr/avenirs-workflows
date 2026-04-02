@@ -23,6 +23,12 @@ on:
         required: true
       BEARER_TOKEN:
         required: true
+      ROCKETCHAT_API_URL:
+        required: true
+      ROCKETCHAT_TOKEN:
+        required: true
+      ROCKETCHAT_USER_ID:
+        required: true
     outputs:
       should_run:
         description: "true if parent is User Story AND all its sub-issues are closed"
@@ -139,6 +145,18 @@ jobs:
           org: ${{ vars.ORG }}
           us_issue_type: ${{ vars.US_ISSUE_TYPE }}
 
+      - name: 🚀 Notify Rocket.Chat
+        if: ${{ needs.check.result != 'success' || needs.deploy.result != 'success' }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
+        with:
+          api-url: ${{ secrets.ROCKETCHAT_API_URL }}
+          auth-token: ${{ secrets.ROCKETCHAT_TOKEN }}
+          user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
+          channel: '#Avenirs_developpement'
+          message: |
+            ❌ Nightly workflow failed. Deployment cancelled.
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
       - name: 🧭 Move US to Recette in Project
         if: ${{ needs.check.result == 'success' && needs.deploy.result == 'success' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/group-issues-status-update@main
@@ -149,3 +167,15 @@ jobs:
           target_status_name: ${{ vars.RECETTE_STATUS_NAME }}
           org: ${{ vars.ORG }}
           us_issue_type: ${{ vars.US_ISSUE_TYPE }}
+
+      - name: 🚀 Notify Rocket.Chat
+        if: ${{ needs.check.result == 'success' && needs.deploy.result == 'success' }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
+        with:
+          api-url: ${{ secrets.ROCKETCHAT_API_URL }}
+          auth-token: ${{ secrets.ROCKETCHAT_TOKEN }}
+          user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
+          channel: '#Avenirs_fonctionnel'
+          message: |
+            🚀 Déploiement sur qualif OK
+            De nouvelles US sont disponibles, toutes les US dans la colonne "Recette" sont déployées sur qualif (${{ vars.COFOLIO_PROJECT_URL }})

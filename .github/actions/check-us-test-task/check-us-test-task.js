@@ -42,7 +42,7 @@ async function hasTestSubTask(token, parentIssueNodeId) {
 
     const subIssues = parent.subIssues?.nodes ?? [];
     const found = subIssues.some((subIssue) =>
-      norm(subIssue.title).includes("[test]")
+      norm(subIssue.title).includes("[qualif]")
     );
 
     if (found) {
@@ -83,7 +83,7 @@ async function hasTestSubTask(token, parentIssueNodeId) {
   const result = await hasTestSubTask(token, parentIssueNodeId);
 
   console.log(`Parent issue: ${result.title} (${parentIssueNodeId})`);
-  console.log(`Has [TEST] sub-task: ${result.found}`);
+  console.log(`Has [QUALIF] sub-task: ${result.found}`);
 
   appendOutput("test_task", result.found ? "true" : "false");
 })().catch((error) => {
