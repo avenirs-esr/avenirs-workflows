@@ -11,13 +11,13 @@ function reqEnv(name) {
 function norm(value, options = {}) {
   const { stripEmoji = false } = options;
 
-  let result = String(value ?? "").toLowerCase().trim();
+  let result = String(value ?? "").toLowerCase();
 
   if (stripEmoji) {
     result = result.replace(/\p{Extended_Pictographic}/gu, "");
   }
 
-  return result;
+  return result.replace(/\s+/g, " ").trim();
 }
 
 function appendOutput(key, value) {
