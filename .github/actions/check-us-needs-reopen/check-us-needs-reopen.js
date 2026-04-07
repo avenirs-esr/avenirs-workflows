@@ -1,5 +1,5 @@
 const { reqEnv, norm, appendOutputs } = require("../_shared/utils");
-const { getIssueProjectItems } = require("../_shared/github");
+const { gql } = require("../_shared/github");
 
 (async () => {
   const token = reqEnv("TOKEN");
@@ -12,7 +12,54 @@ const { getIssueProjectItems } = require("../_shared/github");
     .map((s) => norm(s))
     .filter(Boolean);
 
-  const issue = await getIssueProjectItems(token, usIssueNodeId, "check-us-needs-reopen");
+  const query = `
+    query CheckUsNeedsReopen($issueNodeId: ID!) {
+      node(id: $issueNodeId) {
+        __typename
+        ... on Issue {
+          issueType {
+            name
+          }
+          projectItems(first: 100) {
+            nodes {
+              project {
+                __typename
+                ... on ProjectV2 {
+                  number
+                  owner {
+                    login
+                  }
+                }
+              }
+              fieldValues(first: 50) {
+                nodes {
+                  __typename
+                  ... on ProjectV2ItemFieldSingleSelectValue {
+                    name
+                    field {
+                      ... on ProjectV2SingleSelectField {
+                        name
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const data = await gql(token, query, { issueNodeId: usIssueNodeId }, {
+    userAgent: "check-us-needs-reopen",
+  });
+
+  const issue = data?.node;
+
+  if (!issue || issue.__typename !== "Issue") {
+    throw new Error(`Node ${usIssueNodeId} is not an Issue`);
+  }
 
   const issueTypeName = issue.issueType?.name ?? "";
   if (norm(issueTypeName) !== norm(wantedUsType)) {
@@ -28,8 +75,8 @@ const { getIssueProjectItems } = require("../_shared/github");
     const project = item?.project;
     if (!project || project.__typename !== "ProjectV2") return false;
 
-    const projectOwnerLogin = project.owner?.login ?? "";
-    return norm(projectOwnerLogin) === norm(org) && project.number === projectNumber;
+    return norm(project.owner?.login ?? "") === norm(org)
+      && project.number === projectNumber;
   });
 
   if (!matchingProjectItem) {
