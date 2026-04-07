@@ -26,9 +26,6 @@ const { gql } = require("../_shared/github");
                 __typename
                 ... on ProjectV2 {
                   number
-                  owner {
-                    login
-                  }
                 }
               }
               fieldValues(first: 50) {
