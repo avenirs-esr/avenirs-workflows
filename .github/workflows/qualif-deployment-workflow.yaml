@@ -154,7 +154,7 @@ jobs:
           user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
           channel: '#Avenirs_developpement'
           message: |
-            ❌ Nightly workflow failed. Deployment cancelled.
+            ❌ [BOT] Nightly workflow failed. Deployment cancelled.
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: 🧭 Move US to Recette in Project
@@ -177,5 +177,5 @@ jobs:
           user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
           channel: '#Avenirs_fonctionnel'
           message: |
-            🚀 Déploiement sur qualif OK
+            🚀 [BOT] Déploiement sur qualif OK
             De nouvelles US sont disponibles, toutes les US dans la colonne "Recette" sont déployées sur qualif (${{ vars.COFOLIO_PROJECT_URL }})

@@ -14,12 +14,6 @@ on:
         required: true
       GH_APP_TOKEN:
         required: true
-      ROCKETCHAT_API_URL:
-        required: true
-      ROCKETCHAT_TOKEN:
-        required: true
-      ROCKETCHAT_USER_ID:
-        required: true
     outputs:
       should_run:
         description: "true if parent is User Story AND all its sub-issues are closed"
