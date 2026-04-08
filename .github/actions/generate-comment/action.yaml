@@ -35,7 +35,7 @@ runs:
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
 
-    - name: 📝 Generate comment body (student/teacher)
+    - name: 📝 Generate comment body (student/staff)
       if: ${{ inputs.dsav-template != 'true' }}
       id: generate-std
       shell: bash
@@ -46,12 +46,12 @@ runs:
         PR_NUMBER=${{ github.event.pull_request.number }}
         BASE_URL="https://${REPO_OWNER}.github.io/${REPO_NAME}/accessibility-reports/${PR_NUMBER}"
         COMMENT_BODY="### ♿ Accessibility Report"
-        for DIR in student teacher; do
+        for DIR in student staff; do
           if [ -d "gh-pages-tmp/$DIR" ]; then
             if [ "$DIR" = "student" ]; then
               COMMENT_BODY="${COMMENT_BODY}\n\n#### 👨‍🎓 Student universe failed routes reports:"
             else
-              COMMENT_BODY="${COMMENT_BODY}\n\n#### 👩‍🏫 Teacher universe failed routes reports:"
+              COMMENT_BODY="${COMMENT_BODY}\n\n#### 👩‍🏫 Staff universe failed routes reports:"
             fi
             while IFS= read -r FILE; do
               FILE=$(basename "$FILE")
