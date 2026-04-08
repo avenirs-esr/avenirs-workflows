@@ -1,4 +1,4 @@
-const { reqEnv, norm, logOutput } = require("../_shared/utils");
+const { reqEnv, appendOutput } = require("../_shared/utils");
 const {
   gql,
   findProjectSingleSelectField,
@@ -6,7 +6,7 @@ const {
 } = require("../_shared/github");
 
 (async () => {
-  logOutput("moved", "false");
+  appendOutput("moved", "false");
 
   const token = reqEnv("TOKEN");
   const issueNodeId = reqEnv("ISSUE_NODE_ID");
@@ -114,9 +114,9 @@ const {
   });
 
   console.log(`✅ Moved issue #${issueNode?.number ?? "?"} to "${targetStatusName}"`);
-  logOutput("moved", "true");
+  appendOutput("moved", "true");
 })().catch((error) => {
   console.error("❌ Error:", error);
-  logOutput("moved", "false");
+  appendOutput("moved", "false");
   process.exit(1);
 });
