@@ -84,3 +84,28 @@ jobs:
           conf_file: ${{ vars.CONF_FILE }}
           resolved_pairs: ${{ needs.select-server.outputs.resolved_pairs }}
           tag_name: ${{ inputs.tag_name }}
+
+  notify:
+    name: 🚀 Notify Rocket.Chat
+    needs: [ select-server, deploy ]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: 🚀 Send Rocket.Chat notification
+        uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
+        with:
+          api-url: ${{ secrets.ROCKETCHAT_API_URL }}
+          auth-token: ${{ secrets.ROCKETCHAT_TOKEN }}
+          user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
+          channel: ${{ vars.ROCKET_CHAT_NOTIFICATION_CANAL }}
+          message: |
+            ${{
+              needs.deploy.result == 'success' &&
+              format('🚀 [BOT] Déploiement réussi sur {0}', needs.select-server.outputs.target_env) ||
+
+              needs.deploy.result == 'cancelled' &&
+              format('⚠️ [BOT] Déploiement annulé sur {0}\n🔎 Run: {1}/{2}/actions/runs/{3}', needs.select-server.outputs.target_env, github.server_url, github.repository, github.run_id) ||
+
+              format('❌ [BOT] Déploiement échoué sur {0}\n🔎 Run: {1}/{2}/actions/runs/{3}', needs.select-server.outputs.target_env, github.server_url, github.repository, github.run_id)
+            }}

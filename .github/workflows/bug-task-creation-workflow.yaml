@@ -1,0 +1,69 @@
+name: Bug task creation workflow
+on:
+  workflow_call:
+    inputs:
+      issue_node_id:
+        required: true
+        type: string
+        description: "GraphQL node_id of the opened/reopened issue"
+    secrets:
+      GH_APP_ID:
+        required: true
+      GH_APP_TOKEN:
+        required: true
+      ROCKETCHAT_API_URL:
+        required: true
+      ROCKETCHAT_TOKEN:
+        required: true
+      ROCKETCHAT_USER_ID:
+        required: true
+
+jobs:
+
+  check-type:
+    runs-on: ubuntu-latest
+    outputs:
+      is_bug: ${{ steps.check.outputs.is_bug }}
+      issue_number: ${{ steps.check.outputs.issue_number }}
+      issue_title: ${{ steps.check.outputs.issue_title }}
+      issue_url: ${{ steps.check.outputs.issue_url }}
+      issue_author: ${{ steps.check.outputs.issue_author }}
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 🔎 Check issue type
+        id: check
+        uses: avenirs-esr/avenirs-workflows/.github/actions/check-issue-type@main
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          issue_node_id: ${{ inputs.issue_node_id }}
+
+  notify:
+    name: 🚀 Notify Rocket.Chat
+    needs: check-type
+    runs-on: ubuntu-latest
+    if: ${{ needs.check-type.outputs.is_bug == 'true' }}
+
+    steps:
+      - name: 🚀 Send Rocket.Chat notification
+        uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
+        with:
+          api-url: ${{ secrets.ROCKETCHAT_API_URL }}
+          auth-token: ${{ secrets.ROCKETCHAT_TOKEN }}
+          user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
+          channel: ${{ vars.ROCKET_CHAT_NOTIFICATION_CANAL }}
+          message: |
+            🐞 [BOT] **NOUVEAU BUG DÉTECTÉ**
+
+            🔢 Issue: #${{ needs.check-type.outputs.issue_number }}
+            📝 Titre: ${{ needs.check-type.outputs.issue_title }}
+            👤 Auteur: @${{ needs.check-type.outputs.issue_author }}
+
+            🔗 Issue: ${{ needs.check-type.outputs.issue_url }}

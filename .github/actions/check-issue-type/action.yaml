@@ -1,0 +1,36 @@
+name: "Check issue type"
+description: "Checks if an issue has type 'Bug' in ProjectV2"
+
+inputs:
+  token:
+    required: true
+  issue_node_id:
+    required: true
+
+outputs:
+  is_bug:
+    value: ${{ steps.run.outputs.is_bug }}
+  issue_number:
+    value: ${{ steps.run.outputs.issue_number }}
+  issue_title:
+    value: ${{ steps.run.outputs.issue_title }}
+  issue_url:
+    value: ${{ steps.run.outputs.issue_url }}
+  issue_author:
+    value: ${{ steps.run.outputs.issue_author }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Setup Node
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 🔎 Check issue type
+      id: run
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
+      run: node "$GITHUB_ACTION_PATH/check-issue-type.js"
