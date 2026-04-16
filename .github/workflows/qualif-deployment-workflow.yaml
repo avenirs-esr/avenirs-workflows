@@ -172,7 +172,7 @@ jobs:
     name: 🚀 Notify Rocket.Chat
     needs: [ check, deploy ]
     runs-on: ubuntu-latest
-    if: always()
+    if: ${{ always() && needs.check.outputs.should_run == 'true' }}
 
     steps:
       - name: 🚀 Send Rocket.Chat notification
