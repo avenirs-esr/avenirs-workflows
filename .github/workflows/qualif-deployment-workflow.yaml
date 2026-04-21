@@ -3,8 +3,6 @@ name: "Qualif Deployment Workflow"
 on:
   workflow_call:
     secrets:
-      GH_TOKEN:
-        required: true
       GH_APP_ID:
         required: true
       GH_APP_TOKEN:
@@ -28,6 +26,10 @@ on:
       ROCKETCHAT_TOKEN:
         required: true
       ROCKETCHAT_USER_ID:
+        required: true
+      WIKI_APP_ID:
+        required: true
+      WIKI_APP_TOKEN:
         required: true
     outputs:
       should_run:
@@ -66,8 +68,42 @@ jobs:
           issue_type: ${{ vars.US_ISSUE_TYPE }}
           org: ${{ vars.ORG }}
 
+  e2e:
+    name: "Run E2E Tests"
+    needs: [ check ]
+    if: ${{ needs.check.outputs.should_run == 'true' }}
+    runs-on:
+      group: Default
+      labels:
+        - self-hosted
+        - ${{ vars.SRV_DEV_LABEL}}
+    permissions:
+      contents: read
+
+    outputs:
+      report_path: ${{ steps.report_meta.outputs.report_path }}
+      report_url: ${{ steps.report_meta.outputs.report_url }}
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 🧭 Build report metadata
+        id: report_meta
+        shell: bash
+        run: |
+          REPORT_PATH="e2e-reports/${GITHUB_RUN_ID}"
+          REPORT_URL="https://avenirs-esr.github.io/avenirs-workflows/${REPORT_PATH}/"
+
+          echo "report_path=${REPORT_PATH}" >> "$GITHUB_OUTPUT"
+          echo "report_url=${REPORT_URL}" >> "$GITHUB_OUTPUT"
+
       - name: ♻️ Reset and seed DEV dataset
-        if: ${{ steps.get_us.outputs.should_run == 'true' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/reset-and-seed-dataset@main
         with:
           seeding_endpoint_path: ${{ vars.SEEDING_ENDPOINT_URL }}
@@ -75,22 +111,57 @@ jobs:
           bearer_token: ${{ secrets.BEARER_TOKEN }}
 
       - name: 🎭 Run E2E Tests
-        if: ${{ steps.get_us.outputs.should_run == 'true' }}
         id: e2e
         uses: avenirs-esr/avenirs-workflows/.github/actions/run-e2e-tests@main
         with:
           base_url: ${{ vars.DEV_COFOLIO_URL }}
           run_local_preview: "false"
           enable_msw: "false"
-          upload_report: "false"
+          upload_report: "true"
           chrome_only: "false"
           review_mode: "true"
           need_to_checkout: "true"
           token: ${{ steps.app.outputs.app-token }}
           empty_dataset_access_token: ${{ secrets.EMPTY_DATASET_ACCESS_TOKEN }}
 
+  publish-report:
+    name: "Publish Playwright report to central Pages"
+    needs: [ check, e2e ]
+    if: ${{ always() && (needs.e2e.result == 'failure') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    outputs:
+      report_url: ${{ needs.e2e.outputs.report_url }}
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.WIKI_APP_ID }}
+          app_private_key: ${{ secrets.WIKI_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 📥 Download Playwright Report
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+
+      - name: 🚀 Deploy report to avenirs-workflows gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ steps.app.outputs.app-token }}
+          external_repository: avenirs-esr/avenirs-workflows
+          publish_branch: gh-pages
+          publish_dir: playwright-report
+          destination_dir: ${{ needs.e2e.outputs.report_path }}
+          keep_files: true
+
   deploy:
-    needs: check
+    needs: [check, e2e]
     if: ${{ success() && needs.check.outputs.should_run == 'true' }}
     runs-on:
       group: Default
@@ -117,7 +188,7 @@ jobs:
           maven_version: ${{ vars.MAVEN_VERSION }}
 
   finalize:
-    needs: [check, deploy]
+    needs: [check, e2e, deploy]
     if: ${{ always() && needs.check.outputs.should_run == 'true' }}
     runs-on: ubuntu-latest
     permissions:
@@ -135,7 +206,7 @@ jobs:
           owner: ${{ vars.ORG }}
 
       - name: 💬 Comment all US in In Review (tests failed)
-        if: ${{ needs.check.result != 'success' || needs.deploy.result != 'success' }}
+        if: ${{ needs.e2e.result != 'success' || needs.deploy.result != 'success' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/group-issues-commentary@main
         with:
           token: ${{ steps.app.outputs.app-token }}
@@ -148,7 +219,7 @@ jobs:
           us_issue_type: ${{ vars.US_ISSUE_TYPE }}
 
       - name: 🧭 Move US to Recette in Project
-        if: ${{ needs.check.result == 'success' && needs.deploy.result == 'success' }}
+        if: ${{ needs.e2e.result == 'success' && needs.deploy.result == 'success' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/group-issues-status-update@main
         with:
           token: ${{ steps.app.outputs.app-token }}
@@ -159,7 +230,7 @@ jobs:
           us_issue_type: ${{ vars.US_ISSUE_TYPE }}
 
       - name: Build message
-        if: ${{ needs.check.result == 'success' && needs.deploy.result == 'success' }}
+        if: ${{ needs.e2e.result == 'success' && needs.deploy.result == 'success' }}
         id: build_message
         uses: avenirs-esr/avenirs-workflows/.github/actions/build-us-column-message@main
         with:
@@ -169,7 +240,7 @@ jobs:
           empty_message: "ℹ️ Aucune User Story déployée sur qualif."
 
       - name: 🚀 Notify Rocket.Chat
-        if: ${{ needs.check.result == 'success' && needs.deploy.result == 'success' }}
+        if: ${{ needs.e2e.result == 'success' && needs.deploy.result == 'success' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
         with:
           api-url: ${{ secrets.ROCKETCHAT_API_URL }}
@@ -183,7 +254,7 @@ jobs:
 
   notify:
     name: 🚀 Notify Rocket.Chat
-    needs: [check, deploy]
+    needs: [check, e2e, publish-report, deploy]
     runs-on: ubuntu-latest
     if: ${{ always() && needs.check.outputs.should_run == 'true' }}
 
@@ -197,10 +268,10 @@ jobs:
           channel: ${{ vars.ROCKET_CHAT_NOTIFICATION_CANAL }}
           message: |
             ${{
-              needs.check.result == 'success' && needs.deploy.result == 'success' &&
+              needs.e2e.result == 'success' && needs.deploy.result == 'success' &&
               '🚀 [BOT] Déploiement réussi sur qualif' ||
 
-              needs.check.result == 'failure' &&
+              needs.e2e.result == 'failure' &&
               '❌ [BOT] Tests E2E échoués. Déploiement annulé.' ||
 
               needs.deploy.result == 'cancelled' &&
@@ -209,7 +280,12 @@ jobs:
               '❌ [BOT] Déploiement échoué sur qualif'
             }}
             ${{
-              !(needs.check.result == 'success' && needs.deploy.result == 'success') &&
-              format('\n🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) ||
+              !(needs.e2e.result == 'success' && needs.deploy.result == 'success') &&
+              format('🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) ||
+              ''
+            }}
+            ${{
+              (needs.e2e.result == 'failure' && needs.publish-report.outputs.report_url != '') &&
+              format('📊 Rapport Playwright : {0}', needs.publish-report.outputs.report_url) ||
               ''
             }}

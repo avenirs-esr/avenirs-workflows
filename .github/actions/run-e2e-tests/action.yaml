@@ -136,4 +136,4 @@ runs:
         name: playwright-report
         path: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e/playwright-report
         if-no-files-found: ignore
-        retention-days: 7
+        retention-days: 5
