@@ -1,0 +1,52 @@
+name: "Get issues in Project V2 column"
+description: "Returns issues of a given type present in a given Project V2 column"
+
+inputs:
+  token:
+    required: true
+    description: "GitHub token (PAT or GitHub App token recommended) with access to org Project V2"
+  project_number:
+    required: true
+    description: "Project V2 number (not id), (e.g. 16 for Cofolio project)"
+  target_status_name:
+    required: false
+    default: "In Review"
+    description: "Target column name (e.g. 'In Review')"
+  org:
+    required: false
+    default: "avenirs-esr"
+    description: "GitHub organization name"
+  issue_type:
+    required: false
+    default: "User Story"
+    description: "Issue type to look for in the column"
+
+outputs:
+  should_run:
+    description: "true if at least one matching issue is found in the target column"
+    value: ${{ steps.run.outputs.should_run }}
+  count:
+    description: "Number of matching issues found"
+    value: ${{ steps.run.outputs.count }}
+  issues_json:
+    description: "JSON array of matching issues"
+    value: ${{ steps.run.outputs.issues_json }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 🔍 Get issues from Project V2 column
+      id: run
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ORG: ${{ inputs.org }}
+        PROJECT_NUMBER: ${{ inputs.project_number }}
+        TARGET_STATUS_NAME: ${{ inputs.target_status_name }}
+        ISSUE_TYPE: ${{ inputs.issue_type }}
+      run: node "$GITHUB_ACTION_PATH/get-issues-in-column.js"
