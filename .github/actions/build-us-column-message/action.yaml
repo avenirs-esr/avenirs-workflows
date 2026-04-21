@@ -1,0 +1,59 @@
+name: "Build US column message"
+description: "Builds a Rocket.Chat-friendly message from issues JSON"
+
+inputs:
+  issues_json:
+    required: true
+    description: "JSON array of issues"
+  count:
+    required: true
+    description: "Number of issues found"
+  empty_message:
+    required: false
+    default: "ℹ️ Aucune User Story trouvée dans la colonne Recette."
+    description: "Message to display when no issue is found"
+  header_message:
+    required: false
+    default: "🧪 User Stories actuellement dans Recette :"
+    description: "Header message displayed before the list"
+
+outputs:
+  message:
+    description: "Formatted multi-line message"
+    value: ${{ steps.build.outputs.message }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install jq
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v jq >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y jq
+        fi
+
+    - name: Build message
+      id: build
+      shell: bash
+      env:
+        ISSUES_JSON: ${{ inputs.issues_json }}
+        COUNT: ${{ inputs.count }}
+        EMPTY_MESSAGE: ${{ inputs.empty_message }}
+        HEADER_MESSAGE: ${{ inputs.header_message }}
+      run: |
+        set -euo pipefail
+
+        {
+          echo "message<<EOF"
+
+          if [ "${COUNT}" = "0" ]; then
+            printf '%s\n' "${EMPTY_MESSAGE}"
+          else
+            ISSUE_LINES="$(echo "${ISSUES_JSON}" | jq -r '.[] | "- [US#\(.number)](\(.url)) : \(.title)"')"
+            printf '%s\n\n%s\n' "${HEADER_MESSAGE}" "${ISSUE_LINES}"
+          fi
+
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"

@@ -105,7 +105,11 @@ jobs:
               format('🚀 [BOT] Déploiement réussi sur {0}', needs.select-server.outputs.target_env) ||
 
               needs.deploy.result == 'cancelled' &&
-              format('⚠️ [BOT] Déploiement annulé sur {0}\n🔎 Run: {1}/{2}/actions/runs/{3}', needs.select-server.outputs.target_env, github.server_url, github.repository, github.run_id) ||
+              format('⚠️ [BOT] Déploiement annulé sur {0}', needs.select-server.outputs.target_env) ||
 
-              format('❌ [BOT] Déploiement échoué sur {0}\n🔎 Run: {1}/{2}/actions/runs/{3}', needs.select-server.outputs.target_env, github.server_url, github.repository, github.run_id)
+              format('❌ [BOT] Déploiement échoué sur {0}', needs.select-server.outputs.target_env)
+            }}
+            ${{
+              needs.deploy.result != 'success' &&
+              format('🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id)
             }}

@@ -31,7 +31,7 @@ on:
         required: true
     outputs:
       should_run:
-        description: "true if parent is User Story AND all its sub-issues are closed"
+        description: "true if at least one matching User Story is found in In Review"
         value: ${{ jobs.check.outputs.should_run }}
 
 permissions:
@@ -43,7 +43,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ steps.check_us.outputs.should_run }}
+      should_run: ${{ steps.get_us.outputs.should_run }}
+      count: ${{ steps.get_us.outputs.count }}
+      issues_json: ${{ steps.get_us.outputs.issues_json }}
 
     steps:
       - name: 🔐 Create GitHub App token
@@ -54,18 +56,18 @@ jobs:
           app_private_key: ${{ secrets.GH_APP_TOKEN }}
           owner: ${{ vars.ORG }}
 
-      - name: 🔍 Search US In Review
-        id: check_us
-        uses: avenirs-esr/avenirs-workflows/.github/actions/check-us-in-column@main
+      - name: 🔍 Get US in In Review
+        id: get_us
+        uses: avenirs-esr/avenirs-workflows/.github/actions/get-issues-in-column@main
         with:
           token: ${{ steps.app.outputs.app-token }}
           project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
           target_status_name: ${{ vars.IN_REVIEW_STATUS_NAME }}
-          org: ${{ vars.ORG }}
           issue_type: ${{ vars.US_ISSUE_TYPE }}
+          org: ${{ vars.ORG }}
 
       - name: ♻️ Reset and seed DEV dataset
-        if: ${{ steps.check_us.outputs.should_run == 'true' }}
+        if: ${{ steps.get_us.outputs.should_run == 'true' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/reset-and-seed-dataset@main
         with:
           seeding_endpoint_path: ${{ vars.SEEDING_ENDPOINT_URL }}
@@ -73,7 +75,7 @@ jobs:
           bearer_token: ${{ secrets.BEARER_TOKEN }}
 
       - name: 🎭 Run E2E Tests
-        if: ${{ steps.check_us.outputs.should_run == 'true' }}
+        if: ${{ steps.get_us.outputs.should_run == 'true' }}
         id: e2e
         uses: avenirs-esr/avenirs-workflows/.github/actions/run-e2e-tests@main
         with:
@@ -156,6 +158,16 @@ jobs:
           org: ${{ vars.ORG }}
           us_issue_type: ${{ vars.US_ISSUE_TYPE }}
 
+      - name: Build message
+        if: ${{ needs.check.result == 'success' && needs.deploy.result == 'success' }}
+        id: build_message
+        uses: avenirs-esr/avenirs-workflows/.github/actions/build-us-column-message@main
+        with:
+          issues_json: ${{ needs.check.outputs.issues_json }}
+          count: ${{ needs.check.outputs.count }}
+          header_message: "🧪 Nouvelle(s) US déployée(s) sur qualif :"
+          empty_message: "ℹ️ Aucune User Story déployée sur qualif."
+
       - name: 🚀 Notify Rocket.Chat
         if: ${{ needs.check.result == 'success' && needs.deploy.result == 'success' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
@@ -166,11 +178,12 @@ jobs:
           channel: '#Avenirs_fonctionnel'
           message: |
             🚀 [BOT] Déploiement sur qualif OK
-            De nouvelles US sont disponibles, toutes les US dans la colonne "Recette" sont déployées sur qualif (${{ vars.COFOLIO_PROJECT_URL }})
+
+            ${{ steps.build_message.outputs.message }}
 
   notify:
     name: 🚀 Notify Rocket.Chat
-    needs: [ check, deploy ]
+    needs: [check, deploy]
     runs-on: ubuntu-latest
     if: ${{ always() && needs.check.outputs.should_run == 'true' }}
 
@@ -184,15 +197,18 @@ jobs:
           channel: ${{ vars.ROCKET_CHAT_NOTIFICATION_CANAL }}
           message: |
             ${{
-              needs.check.result == 'success' &&
-              needs.deploy.result == 'success' &&
-              format('🚀 [BOT] Déploiement réussi sur qualif') ||
+              needs.check.result == 'success' && needs.deploy.result == 'success' &&
+              '🚀 [BOT] Déploiement réussi sur qualif' ||
 
               needs.check.result == 'failure' &&
-              format('❌ [BOT] Tests E2E échoués. Déploiement annulé.\n🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) ||
+              '❌ [BOT] Tests E2E échoués. Déploiement annulé.' ||
 
               needs.deploy.result == 'cancelled' &&
-              format('⚠️ [BOT] Déploiement annulé sur qualif\n🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) ||
+              '⚠️ [BOT] Déploiement annulé sur qualif' ||
 
-              format('❌ [BOT] Déploiement échoué sur qualif\n🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id)
+              '❌ [BOT] Déploiement échoué sur qualif'
+            }}
+            ${{
+              !(needs.check.result == 'success' && needs.deploy.result == 'success') &&
+              format('\n🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id)
             }}
