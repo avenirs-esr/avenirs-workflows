@@ -210,5 +210,6 @@ jobs:
             }}
             ${{
               !(needs.check.result == 'success' && needs.deploy.result == 'success') &&
-              format('\n🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id)
+              format('\n🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) ||
+              ''
             }}
