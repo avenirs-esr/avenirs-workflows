@@ -1,4 +1,13 @@
-const { reqEnv, norm, appendOutputs } = require("../_shared/utils");
+const {
+  reqEnv,
+  norm,
+  appendOutputs,
+  isCurrentSprintToken,
+  findProjectIterationField,
+  findIterationFieldValue,
+  resolveCurrentIterationTitle,
+} = require("../_shared/utils");
+
 const {
   gql,
   findProjectSingleSelectField,
@@ -18,8 +27,11 @@ const {
   const projectNumber = Number(reqEnv("PROJECT_NUMBER"));
 
   const statusFieldName = "Status";
+  const sprintFieldName = "Sprint";
+
   const targetStatusName = (process.env.TARGET_STATUS_NAME || "In Review").trim();
   const wantedIssueType = (process.env.ISSUE_TYPE || "User Story").trim();
+  const sprintInput = (process.env.SPRINT || "").trim();
 
   const query = `
     query($org: String!, $number: Int!, $after: String) {
@@ -36,6 +48,24 @@ const {
                 options {
                   id
                   name
+                }
+              }
+              ... on ProjectV2IterationField {
+                id
+                name
+                configuration {
+                  iterations {
+                    id
+                    title
+                    startDate
+                    duration
+                  }
+                  completedIterations {
+                    id
+                    title
+                    startDate
+                    duration
+                  }
                 }
               }
             }
@@ -76,6 +106,17 @@ const {
                       }
                     }
                   }
+                  ... on ProjectV2ItemFieldIterationValue {
+                    title
+                    startDate
+                    duration
+                    field {
+                      ... on ProjectV2IterationField {
+                        id
+                        name
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -92,6 +133,7 @@ const {
   let after = null;
   let project = null;
   let statusFieldId = null;
+  let resolvedSprint = isCurrentSprintToken(sprintInput) ? "" : sprintInput;
   const matchingIssues = [];
 
   do {
@@ -107,9 +149,9 @@ const {
       throw new Error(`ProjectV2 not found or inaccessible: org=${org} number=${projectNumber}`);
     }
 
-    if (!statusFieldId) {
-      const fields = project.fields?.nodes ?? [];
+    const fields = project.fields?.nodes ?? [];
 
+    if (!statusFieldId) {
       const statusField = findProjectSingleSelectField(fields, statusFieldName, {
         stripEmoji: true,
       });
@@ -129,6 +171,24 @@ const {
       statusFieldId = statusField.id;
     }
 
+    if (sprintInput && isCurrentSprintToken(sprintInput) && !resolvedSprint) {
+      const sprintField = findProjectIterationField(fields, sprintFieldName, {
+        stripEmoji: true,
+      });
+
+      if (!sprintField) {
+        throw new Error(`Iteration field "${sprintFieldName}" not found in Project V2 #${projectNumber}.`);
+      }
+
+      resolvedSprint = resolveCurrentIterationTitle(sprintField);
+
+      if (!resolvedSprint) {
+        throw new Error(`Unable to resolve current sprint from iteration field "${sprintFieldName}".`);
+      }
+
+      console.log(`ℹ️ Resolved "${sprintInput}" to current sprint "${resolvedSprint}".`);
+    }
+
     const items = project.items?.nodes ?? [];
 
     for (const item of items) {
@@ -140,11 +200,24 @@ const {
         continue;
       }
 
-      const statusValue = findSingleSelectFieldValue(item.fieldValues?.nodes ?? [], statusFieldId);
+      const fieldValues = item.fieldValues?.nodes ?? [];
+
+      const statusValue = findSingleSelectFieldValue(fieldValues, statusFieldId);
       const currentStatus = statusValue?.name ?? "";
 
       if (norm(currentStatus, { stripEmoji: true }) !== norm(targetStatusName, { stripEmoji: true })) {
         continue;
+      }
+
+      if (resolvedSprint) {
+        const sprintValue = findIterationFieldValue(fieldValues, sprintFieldName, {
+          stripEmoji: true,
+        });
+        const currentSprint = sprintValue?.title ?? "";
+
+        if (norm(currentSprint, { stripEmoji: true }) !== norm(resolvedSprint, { stripEmoji: true })) {
+          continue;
+        }
       }
 
       matchingIssues.push({
@@ -155,7 +228,7 @@ const {
         author: issue.author?.login ?? "unknown",
         state: issue.state ?? "",
         issue_type: issue.issueType?.name ?? "",
-        labels: (issue.labels?.nodes ?? []).map(label => label.name),
+        labels: (issue.labels?.nodes ?? []).map((label) => label.name),
       });
     }
 
@@ -171,7 +244,8 @@ const {
   });
 
   console.log(
-    `✅ Found ${matchingIssues.length} "${wantedIssueType}" issue(s) in "${targetStatusName}" (Project #${projectNumber}).`
+    `✅ Found ${matchingIssues.length} "${wantedIssueType}" issue(s) in "${targetStatusName}"` +
+    `${resolvedSprint ? ` and sprint "${resolvedSprint}"` : ""} (Project #${projectNumber}).`
   );
 })().catch((error) => {
   console.error("❌ Error:", error);
