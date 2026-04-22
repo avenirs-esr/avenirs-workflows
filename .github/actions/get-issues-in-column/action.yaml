@@ -1,5 +1,5 @@
 name: "Get issues in Project V2 column"
-description: "Returns issues of a given type present in a given Project V2 column"
+description: "Returns issues of a given type present in a given Project V2 column, optionally filtered by sprint"
 
 inputs:
   token:
@@ -20,6 +20,10 @@ inputs:
     required: false
     default: "User Story"
     description: "Issue type to look for in the column"
+  sprint:
+    required: false
+    default: ""
+    description: "Optional sprint / iteration title to filter on (e.g. 'Sprint 11')"
 
 outputs:
   should_run:
@@ -49,4 +53,5 @@ runs:
         PROJECT_NUMBER: ${{ inputs.project_number }}
         TARGET_STATUS_NAME: ${{ inputs.target_status_name }}
         ISSUE_TYPE: ${{ inputs.issue_type }}
+        SPRINT: ${{ inputs.sprint }}
       run: node "$GITHUB_ACTION_PATH/get-issues-in-column.js"
