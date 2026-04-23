@@ -60,7 +60,7 @@ jobs:
           user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
           channel: ${{ vars.ROCKET_CHAT_NOTIFICATION_CANAL }}
           message: |
-            🐞 [BOT] **NOUVEAU BUG DÉTECTÉ**
+            🐞 【BOT】 **NOUVEAU BUG DÉTECTÉ**
 
             🔢 Issue: #${{ needs.check-type.outputs.issue_number }}
             📝 Titre: ${{ needs.check-type.outputs.issue_title }}
