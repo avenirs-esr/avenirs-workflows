@@ -51,7 +51,7 @@ runs:
           if [ "${COUNT}" = "0" ]; then
             printf '%s\n' "${EMPTY_MESSAGE}"
           else
-            ISSUE_LINES="$(echo "${ISSUES_JSON}" | jq -r '.[] | "- [US#\(.number)](\(.url)) : \(.title)"')"
+            ISSUE_LINES="$(echo "${ISSUES_JSON}" | jq -r '.[] | "- [US#\(.number)](\(.url)) : \(.title | gsub("\\["; "(") | gsub("\\]"; ")"))"')"
             printf '%s\n\n%s\n' "${HEADER_MESSAGE}" "${ISSUE_LINES}"
           fi
 

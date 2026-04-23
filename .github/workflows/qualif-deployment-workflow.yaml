@@ -259,11 +259,11 @@ jobs:
           user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
           channel: '#Avenirs_fonctionnel'
           message: |
-            🚀 [BOT] Déploiement sur qualif OK
+            🚀 【BOT】 Déploiement sur qualif OK
 
             ${{ steps.build_message.outputs.message }}
 
-            Pour info, il y a ${{ steps.get_us_in_recette.outputs.count }} dans la colonne Recette ( ${{ vars.COFOLIO_PROJECT_URL }} ).
+            Pour info, il y a ${{ steps.get_us_in_recette.outputs.count }} US dans la colonne Recette ( ${{ vars.COFOLIO_PROJECT_URL }} ).
 
   notify:
     name: 🚀 Notify Rocket.Chat
@@ -282,15 +282,15 @@ jobs:
           message: |
             ${{
               needs.e2e.result == 'success' && needs.deploy.result == 'success' &&
-              '🚀 [BOT] Déploiement réussi sur qualif' ||
+              '🚀 【BOT】 Déploiement réussi sur qualif' ||
 
               needs.e2e.result == 'failure' &&
-              '❌ [BOT] Tests E2E échoués. Déploiement annulé.' ||
+              '❌ 【BOT】 Tests E2E échoués. Déploiement annulé.' ||
 
               needs.deploy.result == 'cancelled' &&
-              '⚠️ [BOT] Déploiement annulé sur qualif' ||
+              '⚠️ 【BOT】 Déploiement annulé sur qualif' ||
 
-              '❌ [BOT] Déploiement échoué sur qualif'
+              '❌ 【BOT】 Déploiement échoué sur qualif'
             }}
             ${{
               !(needs.e2e.result == 'success' && needs.deploy.result == 'success') &&
