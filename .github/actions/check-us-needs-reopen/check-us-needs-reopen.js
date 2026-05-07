@@ -9,7 +9,7 @@ const { gql } = require("../_shared/github");
   const wantedUsType = reqEnv("US_ISSUE_TYPE");
   const completedStatuses = reqEnv("COMPLETED_STATUS_NAMES")
     .split(",")
-    .map((s) => norm(s))
+    .map((s) => norm(s, { stripEmoji: true }))
     .filter(Boolean);
 
   const query = `
@@ -26,6 +26,15 @@ const { gql } = require("../_shared/github");
                 __typename
                 ... on ProjectV2 {
                   number
+                  owner {
+                    __typename
+                    ... on Organization {
+                      login
+                    }
+                    ... on User {
+                      login
+                    }
+                  }
                 }
               }
               fieldValues(first: 50) {
@@ -88,11 +97,11 @@ const { gql } = require("../_shared/github");
   const statusValue = (matchingProjectItem.fieldValues?.nodes ?? []).find(
     (fv) =>
       fv.__typename === "ProjectV2ItemFieldSingleSelectValue" &&
-      norm(fv.field?.name) === "status"
+      norm(fv.field?.name, { stripEmoji: true }) === "status"
   );
 
   const currentStatus = statusValue?.name ?? "";
-  const shouldReopen = completedStatuses.includes(norm(currentStatus));
+  const shouldReopen = completedStatuses.includes(norm(currentStatus, { stripEmoji: true }));
 
   console.log(`US current status: ${currentStatus || "(empty)"}`);
   console.log(`Should reopen: ${shouldReopen}`);
