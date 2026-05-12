@@ -71,6 +71,18 @@ jobs:
         with:
           submodules: recursive
 
+      - name: 🚀 Notify Rocket.Chat for incoming deployment
+        uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
+        with:
+          api-url: ${{ secrets.ROCKETCHAT_API_URL }}
+          auth-token: ${{ secrets.ROCKETCHAT_TOKEN }}
+          user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
+          channel: ${{ vars.ROCKET_CHAT_NOTIFICATION_CANAL }}
+          message: |
+            ${{
+              format('🚀 【BOT】 Déploiement en cours sur {0}...', needs.select-server.outputs.target_env)
+            }}
+
       - name: 🚀 Deploy application on remote server
         uses: avenirs-esr/avenirs-workflows/.github/actions/deploy-on-server@main
         with:
