@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        task: [typecheck, lint, tests]
+        task: [typecheck, lint]
         include:
           - task: typecheck
             name: 🧠 TypeScript type checking
@@ -19,10 +19,6 @@ jobs:
             name: 🧹 Run ESLint
             cmd: "npm run lint"
             envJson: "{}"
-          - task: tests
-            name: 🧪 Run unit tests with coverage
-            cmd: "npm run test:coverage"
-            envJson: '{"VITE_ENABLE_MSW":"true"}'
 
     steps:
       - name: ⬇️ Checkout code
@@ -37,3 +33,56 @@ jobs:
       - name: ${{ matrix.name }}
         run: ${{ matrix.cmd }}
         env: ${{ fromJSON(matrix.envJson) }}
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node + install
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+
+      - name: 🏗️ Build project
+        run: npm run build-only
+
+      - name: 🧪 Run unit tests (shard ${{ matrix.shard }}/4)
+        run: npm run test:coverage:shard -- --shard=${{ matrix.shard }}/4 --outputFile=.vitest-reports/shard-${{ matrix.shard }}.blob
+        env:
+          VITE_ENABLE_MSW: "true"
+
+
+      - name: 📤 Upload blob report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-shard-${{ matrix.shard }}
+          path: .vitest-reports/shard-${{ matrix.shard }}.blob
+
+  merge-coverage:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node + install
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+
+      - name: 📥 Download all blob reports
+        uses: actions/download-artifact@v4
+        with:
+          path: ./blob-reports
+          pattern: coverage-shard-*
+          merge-multiple: true
+
+      - name: 🔀 Merge reports & check coverage thresholds
+        run: npx vitest --mergeReports=./blob-reports --coverage.enabled=true --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=html
+        env:
+          VITE_ENABLE_MSW: "true"
+
