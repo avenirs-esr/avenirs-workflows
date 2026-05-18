@@ -1,0 +1,7 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - heading "503 Service Unavailable" [level=1] [ref=e2]
+  - text: No server is available to handle this request.
+```
