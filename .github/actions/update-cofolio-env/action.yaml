@@ -1,0 +1,35 @@
+name: update-cofolio-env
+description: Update VITE_API_URL in cofolio .env before deployment
+
+inputs:
+  cofolio-path:
+    description: "Absolute path to avenirs-cofolio-client"
+    required: true
+
+  vite-api-url:
+    description: "Full VITE_API_URL value"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Update VITE_API_URL
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        ENV_FILE="${{ inputs.cofolio-path }}/.env"
+        NEW_VALUE="${{ inputs.vite-api-url }}"
+
+        if [ ! -f "$ENV_FILE" ]; then
+          echo "❌ .env file not found: $ENV_FILE"
+          exit 1
+        fi
+
+        if grep -q '^VITE_API_URL=' "$ENV_FILE"; then
+          sed -i "s|^VITE_API_URL=.*|VITE_API_URL=${NEW_VALUE}|" "$ENV_FILE"
+        else
+          echo "VITE_API_URL=${NEW_VALUE}" >> "$ENV_FILE"
+        fi
+
+        echo "✅ VITE_API_URL updated to: ${NEW_VALUE}"

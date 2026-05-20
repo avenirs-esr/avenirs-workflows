@@ -93,6 +93,18 @@ jobs:
           app_private_key: ${{ secrets.GH_APP_TOKEN }}
           owner: ${{ vars.ORG }}
 
+      - name: Update cofolio env
+        uses: avenirs-esr/avenirs-workflows/.github/actions/update-cofolio-env@main
+        with:
+          cofolio-path: ${{ secrets.COFOLIO_CLIENT_PATH }}
+          vite-api-url: ${{ secrets.COFOLIO_VITE_API_URL }}
+
+      - name: Restart cofolio
+        uses: avenirs-esr/avenirs-workflows/.github/actions/restart-docker-service@main
+        with:
+          compose-path: ${{ secrets.SRV_DEV_PATH }}
+          service-name: ${{ secrets.COFOLIO_CLIENT_SERVICE_NAME }}
+
       - name: 🧭 Build report metadata
         id: report_meta
         shell: bash
