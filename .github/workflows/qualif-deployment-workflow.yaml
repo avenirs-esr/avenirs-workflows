@@ -256,7 +256,7 @@ jobs:
         with:
           issues_json: ${{ needs.check.outputs.issues_json }}
           count: ${{ needs.check.outputs.count }}
-          header_message: "🧪 Nouvelle(s) US déployée(s) sur qualif :"
+          header_message: "🧪 Nouvelle(s) US déployée(s) sur qualif et prête(s) pour recette :"
           empty_message: "ℹ️ Aucune User Story déployée sur qualif."
 
       - name: 🔍 Get US in In Review
@@ -268,7 +268,6 @@ jobs:
           target_status_name: ${{ vars.IN_RECETTE_STATUS_NAME }}
           issue_type: ${{ vars.US_ISSUE_TYPE }}
           org: ${{ vars.ORG }}
-          sprint: "@current"
 
       - name: 🚀 Notify Rocket.Chat
         if: ${{ needs.e2e.result == 'success' && needs.deploy.result == 'success' }}
