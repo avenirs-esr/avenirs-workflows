@@ -31,6 +31,14 @@ on:
         required: true
       WIKI_APP_TOKEN:
         required: true
+      COFOLIO_CLIENT_PATH:
+        required: true
+      COFOLIO_VITE_API_URL:
+        required: true
+      SRV_DEV_PATH:
+        required: true
+      COFOLIO_CLIENT_SERVICE_NAME:
+        required: true
     outputs:
       should_run:
         description: "true if at least one matching User Story is found in In Review"
