@@ -1,0 +1,41 @@
+name: restart-docker-service
+description: Rebuild and recreate a docker compose service
+
+inputs:
+  compose-path:
+    description: "Path where docker-compose.yml is located"
+    required: true
+
+  service-name:
+    description: "Docker compose service name"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Rebuild and restart service
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        COMPOSE_PATH="${{ inputs.compose-path }}"
+        SERVICE_NAME="${{ inputs.service-name }}"
+
+        if [ ! -d "$COMPOSE_PATH" ]; then
+          echo "❌ Compose directory not found: $COMPOSE_PATH"
+          exit 1
+        fi
+
+        cd "$COMPOSE_PATH"
+
+        echo "🏗️ Rebuilding image without cache..."
+        docker compose build --no-cache "${SERVICE_NAME}"
+
+        echo "🔄 Recreating container..."
+        docker compose up \
+          -d \
+          --force-recreate \
+          --no-deps \
+          "${SERVICE_NAME}"
+
+        echo "✅ ${SERVICE_NAME} rebuilt and restarted successfully"
