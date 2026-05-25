@@ -87,7 +87,7 @@ jobs:
         run: npx playwright merge-reports --reporter html ../all-blob-reports
 
       - name: 🚀 Deploy report to GitHub Pages
-        if: ${{ failure() && inputs.deploy_to_gh_pages }}
+        if: ${{ needs.pr-e2e-shards.result == 'failure' && inputs.deploy_to_gh_pages }}
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -98,7 +98,7 @@ jobs:
           user_email: github-actions@github.com
 
       - name: 💬 Comment on PR
-        if: ${{ failure() }}
+        if: ${{ needs.pr-e2e-shards.result == 'failure' }}
         uses: thollander/actions-comment-pull-request@v3
         with:
           pr-number: ${{ github.event.pull_request.number }}
