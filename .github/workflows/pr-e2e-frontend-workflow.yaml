@@ -52,7 +52,7 @@ jobs:
           base_url: ${{ inputs.base_url }}
           run_local_preview: ${{ inputs.run_local_preview }}
           enable_msw: ${{ inputs.enable_msw }}
-          upload_report: 'true'
+          upload_report: ${{ inputs.deploy_to_gh_pages }}
           chrome_only: ${{ inputs.chrome_only }}
           review_mode: ${{ inputs.review_mode }}
           empty_dataset_access_token: ${{ secrets.EMPTY_DATASET_ACCESS_TOKEN }}
