@@ -25,9 +25,8 @@ permissions:
   repository-projects: write
 
 jobs:
-  check:
+  setup:
     runs-on: ubuntu-latest
-
     steps:
       - name: 🔐 Create GitHub App token
         id: app
@@ -44,8 +43,24 @@ jobs:
           admin_token: ${{ secrets.ADMIN_TOKEN }}
           bearer_token: ${{ secrets.BEARER_TOKEN }}
 
-      - name: 🎭 Run E2E Tests
-        id: e2e
+  e2e-shards:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 🎭 Run E2E Tests (shard ${{ matrix.shard }}/4)
         uses: avenirs-esr/avenirs-workflows/.github/actions/run-e2e-tests@main
         with:
           base_url: ${{ inputs.host_url }}
@@ -57,3 +72,51 @@ jobs:
           need_to_checkout: "true"
           token: ${{ steps.app.outputs.app-token }}
           empty_dataset_access_token: ${{ secrets.EMPTY_DATASET_ACCESS_TOKEN }}
+          shard: ${{ matrix.shard }}
+          total_shards: 4
+
+  merge-reports:
+    needs: e2e-shards
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: ✅ Checkout cofolio client (develop)
+        uses: actions/checkout@v4
+        with:
+          repository: avenirs-esr/avenirs-cofolio-client
+          ref: develop
+          token: ${{ steps.app.outputs.app-token }}
+          path: avenirs-cofolio-client
+          fetch-depth: 1
+
+      - name: 📦 Install e2e dependencies
+        working-directory: avenirs-cofolio-client/e2e
+        run: npm ci
+
+      - name: 📥 Download all blob reports
+        uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: 🔀 Merge reports into HTML
+        working-directory: avenirs-cofolio-client/e2e
+        run: npx playwright merge-reports --reporter html ../all-blob-reports
+
+      - name: 📤 Upload merged Playwright report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: avenirs-cofolio-client/e2e/playwright-report
+          if-no-files-found: ignore
+          retention-days: 5

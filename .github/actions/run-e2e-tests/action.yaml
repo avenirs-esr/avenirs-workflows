@@ -43,6 +43,14 @@ inputs:
   empty_dataset_access_token:
     description: Token for empty dataset user (used for @dataset-empty E2E scenarios)
     required: false
+  shard:
+    description: Current shard index (e.g. "1"). Leave empty to run all tests without sharding.
+    required: false
+    default: ''
+  total_shards:
+    description: Total number of shards (e.g. "4"). Used only when shard is set.
+    required: false
+    default: '1'
 runs:
   using: composite
   steps:
@@ -119,7 +127,12 @@ runs:
       id: e2e_tests
       shell: bash
       working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e
-      run: ${{ inputs.chrome_only == 'true' && 'npm run e2e:chrome' || 'npm run e2e' }}
+      run: |
+        CMD="${{ inputs.chrome_only == 'true' && 'npm run e2e:chrome' || 'npm run e2e' }}"
+        if [ -n "${{ inputs.shard }}" ]; then
+          CMD="$CMD -- --reporter=blob --shard=${{ inputs.shard }}/${{ inputs.total_shards }}"
+        fi
+        eval $CMD
       env:
         CI: 'true'
         VITE_API_URL: ${{ inputs.base_url }}
@@ -129,8 +142,17 @@ runs:
         EMPTY_DATASET_ACCESS_TOKEN: ${{ inputs.empty_dataset_access_token }}
         MSW_MODE_ON: ${{ inputs.enable_msw }}
 
+    - name: 📦 Upload blob report (shard ${{ inputs.shard }})
+      if: ${{ always() && inputs.shard != '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: blob-report-${{ inputs.shard }}
+        path: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e/blob-report
+        if-no-files-found: ignore
+        retention-days: 5
+
     - name: 📦 Upload Playwright Report
-      if: ${{ always() && inputs.upload_report == 'true' }}
+      if: ${{ always() && inputs.upload_report == 'true' && inputs.shard == '' }}
       uses: actions/upload-artifact@v4
       with:
         name: playwright-report
