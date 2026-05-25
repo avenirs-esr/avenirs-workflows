@@ -29,8 +29,13 @@ on:
         description: Enable review mode to skip tests for features hidden in demo mode
 
 jobs:
-  pr-e2e:
+  pr-e2e-shards:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+
     steps:
       - name: ✅ Checkout code
         uses: actions/checkout@v4
@@ -39,33 +44,54 @@ jobs:
           ref: ${{ github.head_ref }}
 
       - name: 🔧 Setup Node.js
-        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@feat/e2e-sharding
 
-      - name: 🎭 Run E2E Tests
-        id: e2e
-        uses: avenirs-esr/avenirs-workflows/.github/actions/run-e2e-tests@main
+      - name: 🎭 Run E2E Tests (shard ${{ matrix.shard }}/4)
+        uses: avenirs-esr/avenirs-workflows/.github/actions/run-e2e-tests@feat/e2e-sharding
         with:
           base_url: ${{ inputs.base_url }}
           run_local_preview: ${{ inputs.run_local_preview }}
           enable_msw: ${{ inputs.enable_msw }}
-          upload_report: ${{ inputs.deploy_to_gh_pages }}
+          upload_report: 'true'
           chrome_only: ${{ inputs.chrome_only }}
           review_mode: ${{ inputs.review_mode }}
           empty_dataset_access_token: ${{ secrets.EMPTY_DATASET_ACCESS_TOKEN }}
+          shard: ${{ matrix.shard }}
+          total_shards: 4
 
-      - name: 📥 Download Playwright Report
-        if: ${{ failure() && inputs.deploy_to_gh_pages }}
+  merge-and-deploy:
+    needs: pr-e2e-shards
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: ✅ Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.head_ref }}
+
+      - name: 📦 Install e2e dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: 📥 Download all blob reports
         uses: actions/download-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: 🔀 Merge reports into HTML
+        working-directory: e2e
+        run: npx playwright merge-reports --reporter html ../all-blob-reports
 
       - name: 🚀 Deploy report to GitHub Pages
         if: ${{ failure() && inputs.deploy_to_gh_pages }}
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: playwright-report
+          publish_dir: e2e/playwright-report
           destination_dir: e2e-reports/${{ github.event.pull_request.number }}
           allow_empty_commit: true
           user_name: github-actions
