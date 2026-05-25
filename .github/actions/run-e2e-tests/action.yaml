@@ -130,7 +130,7 @@ runs:
       run: |
         CMD="${{ inputs.chrome_only == 'true' && 'npm run e2e:chrome' || 'npm run e2e' }}"
         if [ -n "${{ inputs.shard }}" ]; then
-          CMD="$CMD --reporter=blob --shard=${{ inputs.shard }}/${{ inputs.total_shards }}"
+          CMD="$CMD -- --reporter=blob --shard=${{ inputs.shard }}/${{ inputs.total_shards }}"
         fi
         eval $CMD
       env:
