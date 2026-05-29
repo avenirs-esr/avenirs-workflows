@@ -6,6 +6,8 @@ on:
 jobs:
   publish-to-npm:
     runs-on: ubuntu-latest
+    outputs:
+      published_version: ${{ steps.published-version.outputs.published_version }}
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
@@ -47,3 +49,39 @@ jobs:
 
       - name: 🚀 Publish to npm
         run: npm publish
+
+      - name: 🏷️ Resolve published version
+        id: published-version
+        run: |
+          version=$(node -e 'console.log(require("./package.json").version)')
+          echo "published_version=$version" >> "$GITHUB_OUTPUT"
+
+  notify:
+    name: 🚀 Notify Rocket.Chat
+    needs: [ publish-to-npm ]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: 🚀 Send Rocket.Chat notification
+        uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
+        with:
+          api-url: ${{ secrets.ROCKETCHAT_API_URL }}
+          auth-token: ${{ secrets.ROCKETCHAT_TOKEN }}
+          user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
+          channel: ${{ vars.ROCKET_CHAT_NOTIFICATION_CANAL }}
+          message: |
+            ${{
+              needs.publish-to-npm.result == 'success' &&
+              format('✅ 【BOT】 Publication du DSAV sur npm réussie (v{0})', needs.publish-to-npm.outputs.published_version) ||
+
+              needs.publish-to-npm.result == 'cancelled' &&
+              format('⚠️ 【BOT】 Publication du DSAV sur npm annulée') ||
+
+              format('❌ 【BOT】 Publication du DSAV sur npm échouée')
+            }}
+            ${{
+              needs.publish-to-npm.result != 'success' &&
+              format('🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) ||
+              ''
+            }}

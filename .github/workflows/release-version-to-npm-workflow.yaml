@@ -7,8 +7,6 @@ jobs:
   release:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main' || github.ref_name == 'develop'
-    outputs:
-      released_version: ${{ steps.released-version.outputs.released_version }}
     steps:
       - name: 🔑 Generate GitHub App token
         id: app-token
@@ -51,45 +49,9 @@ jobs:
       - name: 🚀 Run release
         run: npm run release:${{ github.event.inputs.bump }}
 
-      - name: 🏷️ Resolve released version
-        id: released-version
-        run: |
-          version=$(node -e 'console.log(require("./package.json").version)')
-          echo "released_version=$version" >> "$GITHUB_OUTPUT"
-
       - name: ⬆️ Push tags and commits
         env:
           GIT_TOKEN: ${{ secrets.DSAV_BOT_TOKEN }}
         run: |
           git remote set-url origin https://x-access-token:${GIT_TOKEN}@github.com/${{ github.repository }}
           git push origin HEAD --follow-tags
-
-  notify:
-    name: 🚀 Notify Rocket.Chat
-    needs: [ release ]
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-      - name: 🚀 Send Rocket.Chat notification
-        uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
-        with:
-          api-url: ${{ secrets.ROCKETCHAT_API_URL }}
-          auth-token: ${{ secrets.ROCKETCHAT_TOKEN }}
-          user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
-          channel: ${{ vars.ROCKET_CHAT_NOTIFICATION_CANAL }}
-          message: |
-            ${{
-              needs.release.result == 'success' &&
-              format('✅ 【BOT】 Publication du DSAV sur npm réussie (v{0})', needs.release.outputs.released_version) ||
-
-              needs.release.result == 'cancelled' &&
-              format('⚠️ 【BOT】 Publication du DSAV sur npm annulée (version cible: v{0})', needs.release.outputs.released_version || 'inconnue') ||
-
-              format('❌ 【BOT】 Publication du DSAV sur npm échouée (version cible: v{0})', needs.release.outputs.released_version || 'inconnue')
-            }}
-            ${{
-              needs.release.result != 'success' &&
-              format('🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) ||
-              ''
-            }}
