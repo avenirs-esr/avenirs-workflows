@@ -114,7 +114,7 @@ jobs:
           message: |
             ${{
               needs.deploy.result == 'success' &&
-              format('🚀 【BOT】 Déploiement réussi sur {0}', needs.select-server.outputs.target_env) ||
+              format('✅ 【BOT】 Déploiement réussi sur {0}', needs.select-server.outputs.target_env) ||
 
               needs.deploy.result == 'cancelled' &&
               format('⚠️ 【BOT】 Déploiement annulé sur {0}', needs.select-server.outputs.target_env) ||
