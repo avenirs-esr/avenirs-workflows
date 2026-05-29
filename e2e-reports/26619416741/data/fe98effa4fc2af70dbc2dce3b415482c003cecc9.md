@@ -1,0 +1,276 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - link "Accueil - Cofolio Staff" [ref=e10] [cursor=pointer]:
+          - /url: /cofolio/staff
+          - img [ref=e11]
+        - button "Menu" [ref=e14] [cursor=pointer]
+      - button "Changer d'univers" [ref=e17] [cursor=pointer]:
+        - generic [ref=e20]: Changer d'univers
+  - main [ref=e21]:
+    - generic [ref=e22]:
+      - generic [ref=e24]:
+        - navigation "Fil d'Ariane" [ref=e25]:
+          - button "Voir le fil d'Ariane" [ref=e26] [cursor=pointer]:
+            - generic [ref=e27]: Voir le fil d'Ariane
+        - generic [ref=e28]:
+          - button "Retour" [ref=e29] [cursor=pointer]
+          - heading "Ma bibliothèque d'activités" [level=1] [ref=e32]
+      - generic [ref=e33]:
+        - tablist "Liste d’onglets" [ref=e34]:
+          - tab "Mon espace de travail" [selected] [ref=e35] [cursor=pointer]:
+            - generic [ref=e38]: Mon espace de travail
+          - tab "Toutes les activités publiées" [ref=e39] [cursor=pointer]:
+            - generic [ref=e42]: Toutes les activités publiées
+        - tabpanel "Mon espace de travail" [ref=e43]:
+          - generic [ref=e44]:
+            - text: Mon espace de travail (43)
+            - button "Créer une activité" [ref=e46] [cursor=pointer]:
+              - generic [ref=e49]: Créer une activité
+            - generic [ref=e50]:
+              - navigation "Pagination haute" [ref=e52]:
+                - list [ref=e53]:
+                  - listitem [ref=e54]: Page 1 sur 4
+                  - listitem
+                  - listitem [ref=e55]:
+                    - link "Page précédente" [disabled]:
+                      - /url: "#page-1"
+                  - listitem [ref=e56]:
+                    - link "Page suivante" [ref=e57] [cursor=pointer]:
+                      - /url: "#page-2"
+                  - listitem
+              - generic [ref=e61]:
+                - 'link "Renforcer sa communication orale Transverse publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e62] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/2c9e4b77-6a1f-4d55-8b3c-7e2d1a9f4c22
+                  - generic [ref=e63]:
+                    - generic [ref=e67]: Renforcer sa communication orale
+                    - generic [ref=e71]:
+                      - generic [ref=e72]:
+                        - generic [ref=e73]:
+                          - status "Transverse" [ref=e74]:
+                            - generic [ref=e75]: Transverse
+                          - status "publiée" [ref=e76]:
+                            - generic [ref=e77]: publiée
+                        - generic [ref=e81]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e86]: "Modifié : Il y a 24 minutes"
+                - 'link "Développer son esprit d''équipe Transverse publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e87] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/5f2a7c91-8d4e-4b22-9a6c-3e1f7d2b4c99
+                  - generic [ref=e88]:
+                    - generic [ref=e92]: Développer son esprit d'équipe
+                    - generic [ref=e96]:
+                      - generic [ref=e97]:
+                        - generic [ref=e98]:
+                          - status "Transverse" [ref=e99]:
+                            - generic [ref=e100]: Transverse
+                          - status "publiée" [ref=e101]:
+                            - generic [ref=e102]: publiée
+                        - generic [ref=e106]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e111]: "Modifié : Il y a 24 minutes"
+                - 'link "Rédiger une lettre de motivation CV publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e112] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/8c5d1f77-2a9e-4b33-9f6c-1e4b7a2d9c11
+                  - generic [ref=e113]:
+                    - generic [ref=e117]: Rédiger une lettre de motivation
+                    - generic [ref=e121]:
+                      - generic [ref=e122]:
+                        - generic [ref=e123]:
+                          - status "CV" [ref=e124]:
+                            - generic [ref=e125]: CV
+                          - status "publiée" [ref=e126]:
+                            - generic [ref=e127]: publiée
+                        - generic [ref=e131]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e136]: "Modifié : Il y a 24 minutes"
+                - 'link "Structurer son CV CV publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e137] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/3b7a2c91-6d4e-4f88-8c1a-5e9f2b7d4c66
+                  - generic [ref=e138]:
+                    - generic [ref=e142]: Structurer son CV
+                    - generic [ref=e146]:
+                      - generic [ref=e147]:
+                        - generic [ref=e148]:
+                          - status "CV" [ref=e149]:
+                            - generic [ref=e150]: CV
+                          - status "publiée" [ref=e151]:
+                            - generic [ref=e152]: publiée
+                        - generic [ref=e156]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e161]: "Modifié : Il y a 24 minutes"
+                - 'link "Analyser une réorientation Mes trajectoires publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e162] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/1f8b3c77-5d2a-4e66-9a4c-7b2e6d9f1a55
+                  - generic [ref=e163]:
+                    - generic [ref=e167]: Analyser une réorientation
+                    - generic [ref=e171]:
+                      - generic [ref=e172]:
+                        - generic [ref=e173]:
+                          - status "Mes trajectoires" [ref=e174]:
+                            - generic [ref=e175]: Mes trajectoires
+                          - status "publiée" [ref=e176]:
+                            - generic [ref=e177]: publiée
+                        - generic [ref=e181]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e186]: "Modifié : Il y a 24 minutes"
+                - 'link "Retracer les étapes clés de son parcours Mes trajectoires publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e187] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/6a4c2e91-8f7d-4b22-9a1f-3c5e7d2b8f10
+                  - generic [ref=e188]:
+                    - generic [ref=e192]: Retracer les étapes clés de son parcours
+                    - generic [ref=e196]:
+                      - generic [ref=e197]:
+                        - generic [ref=e198]:
+                          - status "Mes trajectoires" [ref=e199]:
+                            - generic [ref=e200]: Mes trajectoires
+                          - status "publiée" [ref=e201]:
+                            - generic [ref=e202]: publiée
+                        - generic [ref=e206]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e211]: "Modifié : Il y a 24 minutes"
+                - 'link "Identifier ses réussites marquantes Mes expériences publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e212] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/9e2b6a41-3c7d-4f99-8a55-2d1c6b7e4f33
+                  - generic [ref=e213]:
+                    - generic [ref=e217]: Identifier ses réussites marquantes
+                    - generic [ref=e221]:
+                      - generic [ref=e222]:
+                        - generic [ref=e223]:
+                          - status "Mes expériences" [ref=e224]:
+                            - generic [ref=e225]: Mes expériences
+                          - status "publiée" [ref=e226]:
+                            - generic [ref=e227]: publiée
+                        - generic [ref=e231]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e236]: "Modifié : Il y a 24 minutes"
+                - 'link "Analyser un stage réalisé Mes expériences publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e237] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/4d8f1c77-2a5b-4e11-9c2d-6f3b7a9e2c88
+                  - generic [ref=e238]:
+                    - generic [ref=e242]: Analyser un stage réalisé
+                    - generic [ref=e246]:
+                      - generic [ref=e247]:
+                        - generic [ref=e248]:
+                          - status "Mes expériences" [ref=e249]:
+                            - generic [ref=e250]: Mes expériences
+                          - status "publiée" [ref=e251]:
+                            - generic [ref=e252]: publiée
+                        - generic [ref=e256]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e261]: "Modifié : Il y a 24 minutes"
+                - 'link "Identifier les compétences académiques clés Mes formations publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e262] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/7c3d9a12-4e88-4f55-9a1d-5b6e2c7f3a44
+                  - generic [ref=e263]:
+                    - generic [ref=e267]: Identifier les compétences académiques clés
+                    - generic [ref=e271]:
+                      - generic [ref=e272]:
+                        - generic [ref=e273]:
+                          - status "Mes formations" [ref=e274]:
+                            - generic [ref=e275]: Mes formations
+                          - status "publiée" [ref=e276]:
+                            - generic [ref=e277]: publiée
+                        - generic [ref=e281]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e286]: "Modifié : Il y a 24 minutes"
+                - 'link "Analyser la cohérence de sa formation Mes formations publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e287] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/2f6a8b91-5d33-4c77-8e4a-1b9f3c7d2a11
+                  - generic [ref=e288]:
+                    - generic [ref=e292]: Analyser la cohérence de sa formation
+                    - generic [ref=e296]:
+                      - generic [ref=e297]:
+                        - generic [ref=e298]:
+                          - status "Mes formations" [ref=e299]:
+                            - generic [ref=e300]: Mes formations
+                          - status "publiée" [ref=e301]:
+                            - generic [ref=e302]: publiée
+                        - generic [ref=e306]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e311]: "Modifié : Il y a 24 minutes"
+                - 'link "Comparer plusieurs projets possibles Explorer mes futures publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e312] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/8b4f2d77-3c1a-4e66-9f2b-6d8c3a5e1f22
+                  - generic [ref=e313]:
+                    - generic [ref=e317]: Comparer plusieurs projets possibles
+                    - generic [ref=e321]:
+                      - generic [ref=e322]:
+                        - generic [ref=e323]:
+                          - status "Explorer mes futures" [ref=e324]:
+                            - generic [ref=e325]: Explorer mes futures
+                          - status "publiée" [ref=e326]:
+                            - generic [ref=e327]: publiée
+                        - generic [ref=e331]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e336]: "Modifié : Il y a 24 minutes"
+                - 'link "Explorer les métiers d''un secteur Explorer mes futures publiée Propriétaire : Lucas Tessier Modifié : Il y a 24 minutes" [ref=e337] [cursor=pointer]':
+                  - /url: /cofolio/staff/activities/PUBLISHED/5e2c9f41-8b7d-4a10-9c6a-3f1e7b2d4c55
+                  - generic [ref=e338]:
+                    - generic [ref=e342]: Explorer les métiers d'un secteur
+                    - generic [ref=e346]:
+                      - generic [ref=e347]:
+                        - generic [ref=e348]:
+                          - status "Explorer mes futures" [ref=e349]:
+                            - generic [ref=e350]: Explorer mes futures
+                          - status "publiée" [ref=e351]:
+                            - generic [ref=e352]: publiée
+                        - generic [ref=e356]: "Propriétaire : Lucas Tessier"
+                      - generic [ref=e361]: "Modifié : Il y a 24 minutes"
+              - navigation "Pagination basse" [ref=e363]:
+                - list [ref=e364]:
+                  - listitem [ref=e365]:
+                    - link "Première page" [disabled]:
+                      - /url: "#page-1"
+                      - generic: Première page
+                  - listitem [ref=e366]:
+                    - link "Page précédente" [disabled]:
+                      - /url: "#page-1"
+                  - listitem [ref=e367]:
+                    - link "1" [ref=e368] [cursor=pointer]:
+                      - /url: "#page-1"
+                  - listitem [ref=e369]:
+                    - link "2 ..." [ref=e370] [cursor=pointer]:
+                      - /url: "#page-2"
+                      - text: "2"
+                      - generic [ref=e371]: ...
+                  - listitem [ref=e372]:
+                    - link "Page suivante" [ref=e373] [cursor=pointer]:
+                      - /url: "#page-2"
+                  - listitem [ref=e376]:
+                    - link "Dernière page" [ref=e377] [cursor=pointer]:
+                      - /url: "#page-4"
+                      - generic [ref=e378]: Dernière page
+  - contentinfo [ref=e381]:
+    - generic [ref=e383]:
+      - generic [ref=e384]:
+        - link "Logo ANR" [ref=e385] [cursor=pointer]:
+          - /url: https://anr.fr/ProjetIA-21-DMAV-0001
+          - img "Logo ANR" [ref=e386]
+        - link "Logo France 2030" [ref=e387] [cursor=pointer]:
+          - /url: https://www.info.gouv.fr/actualite/france-2030-attractivite-de-l-excellence-universitaire-francaise-le-gouvernement-investit-pres-de
+          - img "Logo France 2030" [ref=e388]
+      - generic [ref=e389]: Ce travail a bénéficié d'une aide de l'État gérée par l'Agence Nationale de la Recherche au titre du programme d'investissements d'avenir intégré à France 2030, portant la référence ANR-21-DMAV-0001
+    - generic [ref=e390]:
+      - generic [ref=e391]:
+        - img "Logo Cofolio" [ref=e392]
+        - generic [ref=e403]: Un ePortfolio pour l'Enseignement Supérieur et la Recherche
+      - generic [ref=e404]:
+        - generic [ref=e405]:
+          - generic [ref=e406]: Informations
+          - list [ref=e407]:
+            - listitem [ref=e408]:
+              - 'link "Accessibilité : partiellement conforme" [ref=e409] [cursor=pointer]':
+                - /url: /cofolio/staff/accessibility
+            - listitem [ref=e410]:
+              - link "Mentions légales" [ref=e411] [cursor=pointer]:
+                - /url: /cofolio/staff/legal
+            - listitem [ref=e412]:
+              - link "Données personnelles" [ref=e413] [cursor=pointer]:
+                - /url: /cofolio/staff/personal-data
+            - listitem [ref=e414]:
+              - link "Gestion des cookies" [ref=e415] [cursor=pointer]:
+                - /url: /cofolio/staff/cookies
+        - generic [ref=e416]:
+          - generic [ref=e417]: Autres sites
+          - list [ref=e418]:
+            - listitem [ref=e419]:
+              - link "Volet ESR du programme AVENIR(s) - Accueil" [ref=e420] [cursor=pointer]:
+                - /url: https://avenirs-esr.fr/
+                - text: avenirs-esr.fr
+        - generic [ref=e421]:
+          - generic [ref=e422]: Partenaires
+          - generic [ref=e423]:
+            - link "Volet ESR du programme AVENIR(s) - Accueil" [ref=e424] [cursor=pointer]:
+              - /url: https://avenirs-esr.fr/
+              - img "Logo Avenir(s) ESR" [ref=e425]
+            - link "Communauté d'établissements français d'enseignement supérieur pour l'innovation numérique - Accueil" [ref=e426] [cursor=pointer]:
+              - /url: https://www.esup-portail.org/
+              - img "Logo Esup Portail" [ref=e428]
+    - link "@ESUP-Portail. Tous droits réservés. - Accueil" [ref=e432] [cursor=pointer]:
+      - /url: https://www.esup-portail.org/
+      - text: "@ESUP-Portail. Tous droits réservés."
+```
