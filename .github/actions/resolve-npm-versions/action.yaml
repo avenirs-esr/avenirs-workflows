@@ -1,0 +1,75 @@
+name: "Resolve npm versions"
+description: "Resolves current package version and computes target version from an npm bump value"
+
+inputs:
+  bump:
+    description: "npm bump value (major|minor|patch)"
+    required: false
+    default: ""
+  package_path:
+    description: "Path to package.json"
+    required: false
+    default: "./package.json"
+
+outputs:
+  current_version:
+    description: "Current version read from package.json"
+    value: ${{ steps.resolve.outputs.current_version }}
+  target_version:
+    description: "Computed target version from bump"
+    value: ${{ steps.resolve.outputs.target_version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🏷️ Resolve current and target versions
+      id: resolve
+      shell: bash
+      env:
+        BUMP: ${{ inputs.bump }}
+        PACKAGE_PATH: ${{ inputs.package_path }}
+      run: |
+        set -euo pipefail
+
+        current_version=$(node - "$PACKAGE_PATH" <<'NODE'
+        const packagePath = process.argv[2] || './package.json'
+        const pkg = require(packagePath)
+        if (!pkg?.version) {
+          process.exit(1)
+        }
+        console.log(pkg.version)
+        NODE
+        )
+
+        target_version=$(node - "$current_version" "$BUMP" <<'NODE'
+        const current = process.argv[2]
+        const bump = process.argv[3]
+
+        const match = current.match(/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/)
+        if (!match) {
+          console.log('inconnue')
+          process.exit(0)
+        }
+
+        let major = Number(match[1])
+        let minor = Number(match[2])
+        let patch = Number(match[3])
+
+        switch (bump) {
+          case 'major':
+            console.log(`${major + 1}.0.0`)
+            break
+          case 'minor':
+            console.log(`${major}.${minor + 1}.0`)
+            break
+          case 'patch':
+            console.log(`${major}.${minor}.${patch + 1}`)
+            break
+          default:
+            console.log('inconnue')
+        }
+        NODE
+        )
+
+        echo "current_version=$current_version" >> "$GITHUB_OUTPUT"
+        echo "target_version=$target_version" >> "$GITHUB_OUTPUT"

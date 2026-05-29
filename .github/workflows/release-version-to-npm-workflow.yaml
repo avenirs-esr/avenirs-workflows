@@ -17,6 +17,20 @@ jobs:
           app_id: ${{ secrets.DSAV_GH_APP_ID }}
           private_key: ${{ secrets.DSAV_GH_APP_PRIVATE_KEY }}
 
+      - name: ⬇️ Checkout repo with App token
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: 🔧 Setup Node + install
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+
+      - name: 🧮 Resolve npm versions
+        id: npm-versions
+        uses: avenirs-esr/avenirs-workflows/.github/actions/resolve-npm-versions@main
+        with:
+          bump: ${{ github.event.inputs.bump }}
+
       - name: 🚀 Notify Rocket.Chat for incoming deployment
         uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
         with:
@@ -26,16 +40,8 @@ jobs:
           channel: ${{ vars.ROCKET_CHAT_NOTIFICATION_CANAL }}
           message: |
             ${{
-              format('🚀 【BOT】 Publication npm en cours...')
+              format('🚀 【BOT】 Publication du DSAV sur npm en cours (actuelle: v{0} -> cible: v{1})...', steps.npm-versions.outputs.current_version, steps.npm-versions.outputs.target_version)
             }}
-
-      - name: ⬇️ Checkout repo with App token
-        uses: actions/checkout@v4
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-
-      - name: 🔧 Setup Node + install
-        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
 
       - name: 🖊️ Configure Git user
         run: |
@@ -48,7 +54,8 @@ jobs:
       - name: 🏷️ Resolve released version
         id: released-version
         run: |
-          echo "released_version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+          version=$(node -e 'console.log(require("./package.json").version)')
+          echo "released_version=$version" >> "$GITHUB_OUTPUT"
 
       - name: ⬆️ Push tags and commits
         env:
@@ -74,12 +81,12 @@ jobs:
           message: |
             ${{
               needs.release.result == 'success' &&
-              format('✅ 【BOT】 Publication npm réussie (v{0})', needs.release.outputs.released_version) ||
+              format('✅ 【BOT】 Publication du DSAV sur npm réussie (v{0})', needs.release.outputs.released_version) ||
 
               needs.release.result == 'cancelled' &&
-              format('⚠️ 【BOT】 Publication npm annulée (version cible: v{0})', needs.release.outputs.released_version || 'inconnue') ||
+              format('⚠️ 【BOT】 Publication du DSAV sur npm annulée (version cible: v{0})', needs.release.outputs.released_version || 'inconnue') ||
 
-              format('❌ 【BOT】 Publication npm échouée (version cible: v{0})', needs.release.outputs.released_version || 'inconnue')
+              format('❌ 【BOT】 Publication du DSAV sur npm échouée (version cible: v{0})', needs.release.outputs.released_version || 'inconnue')
             }}
             ${{
               needs.release.result != 'success' &&
