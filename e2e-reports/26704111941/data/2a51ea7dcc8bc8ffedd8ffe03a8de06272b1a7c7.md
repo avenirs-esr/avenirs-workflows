@@ -1,0 +1,172 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - link "Accueil - Cofolio Étudiant" [ref=e10]:
+            - /url: /cofolio/student
+            - img [ref=e11]
+          - button "Menu" [ref=e16]
+        - button "Changer d'univers" [ref=e17]
+      - generic [ref=e19]:
+        - list [ref=e21]:
+          - listitem [ref=e22]:
+            - button "Messagerie" [ref=e25]
+          - listitem [ref=e26]:
+            - button "Notifications" [ref=e29]
+          - listitem [ref=e30]:
+            - button "L. Tessier" [disabled] [ref=e33]
+        - navigation [ref=e34]:
+          - generic "Sélectionner une langue" [ref=e35]:
+            - button "FR" [ref=e37]
+    - navigation "Menu principal" [ref=e41]:
+      - list [ref=e42]:
+        - listitem [ref=e43]:
+          - link "ACCUEIL" [ref=e44]:
+            - /url: /cofolio/student
+        - listitem [ref=e45]:
+          - button "RÉUSSIR MA FORMATION" [ref=e46]
+          - list [ref=e48]:
+            - listitem [ref=e49]:
+              - link "Mes compétences" [ref=e50]:
+                - /url: /cofolio/student/education/skills
+        - listitem [ref=e51]:
+          - button "CONSTRUIRE MON PROJET DE VIE" [ref=e52]
+          - list [ref=e54]:
+            - listitem [ref=e55]:
+              - link "Toutes mes compétences" [ref=e56]:
+                - /url: /cofolio/student/project/skills
+            - listitem [ref=e57]:
+              - link "Mon parcours" [ref=e58]:
+                - /url: /cofolio/student/project/personal-career/declared-programs
+            - listitem [ref=e59]:
+              - link "Bâtir mon projet" [ref=e60]:
+                - /url: /cofolio/student/project/trajectories
+            - listitem [ref=e61]:
+              - link "Mes activités" [ref=e62]:
+                - /url: /cofolio/student/project/activities
+        - listitem [ref=e63]:
+          - button "MES OUTILS" [ref=e64]
+          - list [ref=e66]:
+            - listitem [ref=e67]:
+              - link "Mes traces" [ref=e68]:
+                - /url: /cofolio/student/tools/traces
+  - main [ref=e69]:
+    - generic [ref=e70]:
+      - generic [ref=e72]:
+        - navigation "Fil d'Ariane" [ref=e73]:
+          - list [ref=e75]:
+            - listitem [ref=e76]:
+              - link "Accueil" [ref=e77]:
+                - /url: /cofolio/student
+            - listitem [ref=e78]: Construire mon projet de vie
+            - listitem [ref=e79]:
+              - link "Mes activités" [ref=e80]:
+                - /url: /cofolio/student/project/activities
+        - generic [ref=e81]:
+          - button "Retour" [ref=e82]
+          - heading "Toutes les activités disponibles" [level=1] [ref=e83]
+      - generic [ref=e84]:
+        - navigation "8274ebf4-4cae-47b9-9b6b-415d36bfd7e6 navigation" [ref=e85]:
+          - button "Collapse button" [expanded] [ref=e87]
+          - menu [ref=e89]:
+            - menuitem "Me connaître" [ref=e90]:
+              - button "Me connaître" [ref=e91]:
+                - generic [ref=e92]: Me connaître
+            - menu [ref=e94]:
+              - menuitem "Définir ses valeurs" [ref=e95]:
+                - button "Définir ses valeurs" [ref=e96]:
+                  - generic [ref=e97]: Définir ses valeurs
+              - menuitem "Identifier ses motivations profondes" [ref=e98]:
+                - button "Identifier ses motivations profondes" [ref=e99]:
+                  - generic [ref=e100]: Identifier ses motivations profondes
+              - menuitem "Clarifier son identité personnelle" [ref=e101]:
+                - button "Clarifier son identité personnelle" [ref=e102]:
+                  - generic [ref=e103]: Clarifier son identité personnelle
+              - menuitem "Identifier ses centres d'intérêt" [ref=e104]:
+                - button "Identifier ses centres d'intérêt" [ref=e105]:
+                  - generic [ref=e106]: Identifier ses centres d'intérêt
+            - menuitem "Explorer mes futures" [ref=e107]:
+              - button "Explorer mes futures" [ref=e108]:
+                - generic [ref=e109]: Explorer mes futures
+            - menuitem "Mes formations" [ref=e110]:
+              - button "Mes formations" [ref=e111]:
+                - generic [ref=e112]: Mes formations
+            - menuitem "Mes expériences" [ref=e113]:
+              - button "Mes expériences" [ref=e114]:
+                - generic [ref=e115]: Mes expériences
+            - menuitem "Mes trajectoires" [ref=e116]:
+              - button "Mes trajectoires" [ref=e117]:
+                - generic [ref=e118]: Mes trajectoires
+            - menuitem "CV" [ref=e119]:
+              - button "CV" [ref=e120]:
+                - generic [ref=e121]: CV
+            - menuitem "Transverse" [ref=e122]:
+              - button "Transverse" [ref=e123]:
+                - generic [ref=e124]: Transverse
+        - generic [ref=e125]:
+          - generic [ref=e126]:
+            - button "Précédent" [ref=e127]
+            - button "Suivant" [ref=e128]
+          - generic [ref=e130]:
+            - img [ref=e133]
+            - generic [ref=e134]: Définir ses valeurs
+            - status "Me connaître" [ref=e136]
+            - generic [ref=e139]:
+              - generic [ref=e140]:
+                - generic [ref=e141]: Extrait de l'activitéActivité faisant partie de la catégorie Connaissance de soi. Elle permet à l'étudiant.e d'identifier les valeurs essentielles qui orientent ses choix et d'analyser la manière dont elles se traduisent dans ses comportements quotidiens. Cette réflexion constitue une base structurante pour construire un projet personnel et professionnel cohérent.
+                - generic [ref=e142]: Période de réalisationÀ réaliser en amont d'un entretien avec un.e conseiller/ conseillère d'orientation ou avant d'engager un parcours structuré d'activités Cofolio.
+              - button "M'inscrire à l'activité" [ref=e144]
+  - contentinfo [ref=e145]:
+    - generic [ref=e146]:
+      - generic [ref=e147]:
+        - link "Logo ANR" [ref=e148]:
+          - /url: https://anr.fr/ProjetIA-21-DMAV-0001
+          - img "Logo ANR" [ref=e149]
+        - link "Logo France 2030" [ref=e150]:
+          - /url: https://www.info.gouv.fr/actualite/france-2030-attractivite-de-l-excellence-universitaire-francaise-le-gouvernement-investit-pres-de
+          - img "Logo France 2030" [ref=e151]
+      - text: Ce travail a bénéficié d'une aide de l'État gérée par l'Agence Nationale de la Recherche au titre du programme d'investissements d'avenir intégré à France 2030, portant la référence ANR-21-DMAV-0001
+    - generic [ref=e152]:
+      - generic [ref=e153]:
+        - img "Logo Cofolio" [ref=e154]
+        - text: Un ePortfolio pour l'Enseignement Supérieur et la Recherche
+      - generic [ref=e166]:
+        - generic [ref=e167]:
+          - text: Informations
+          - list [ref=e168]:
+            - listitem [ref=e169]:
+              - 'link "Accessibilité : partiellement conforme" [ref=e170]':
+                - /url: /cofolio/student/accessibility
+            - listitem [ref=e171]:
+              - link "Mentions légales" [ref=e172]:
+                - /url: /cofolio/student/legal
+            - listitem [ref=e173]:
+              - link "Données personnelles" [ref=e174]:
+                - /url: /cofolio/student/personal-data
+            - listitem [ref=e175]:
+              - link "Gestion des cookies" [ref=e176]:
+                - /url: /cofolio/student/cookies
+        - generic [ref=e177]:
+          - text: Autres sites
+          - list [ref=e178]:
+            - listitem [ref=e179]:
+              - link "Volet ESR du programme AVENIR(s) - Accueil" [ref=e180]:
+                - /url: https://avenirs-esr.fr/
+                - text: avenirs-esr.fr
+        - generic [ref=e181]:
+          - text: Partenaires
+          - generic [ref=e182]:
+            - link "Volet ESR du programme AVENIR(s) - Accueil" [ref=e183]:
+              - /url: https://avenirs-esr.fr/
+              - img "Logo Avenir(s) ESR" [ref=e184]
+            - link "Communauté d'établissements français d'enseignement supérieur pour l'innovation numérique - Accueil" [ref=e185]:
+              - /url: https://www.esup-portail.org/
+              - img "Logo Esup Portail" [ref=e187]
+    - link "@ESUP-Portail. Tous droits réservés. - Accueil" [ref=e191]:
+      - /url: https://www.esup-portail.org/
+      - text: "@ESUP-Portail. Tous droits réservés."
+```
