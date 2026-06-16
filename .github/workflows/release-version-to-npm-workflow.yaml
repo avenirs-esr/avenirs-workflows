@@ -8,21 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref_name == 'main' || github.ref_name == 'develop'
     steps:
-      - name: 🔑 Generate GitHub App token
-        id: app-token
-        uses: tibdex/github-app-token@v2
-        with:
-          app_id: ${{ secrets.DSAV_GH_APP_ID }}
-          private_key: ${{ secrets.DSAV_GH_APP_PRIVATE_KEY }}
-
-      - name: ⬇️ Checkout repo with App token
-        uses: actions/checkout@v4
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-
-      - name: 🔧 Setup Node + install
-        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
-
       - name: 🧮 Resolve npm versions
         id: npm-versions
         uses: avenirs-esr/avenirs-workflows/.github/actions/resolve-npm-versions@main
@@ -40,6 +25,21 @@ jobs:
             ${{
               format('🚀 【BOT】 Publication du DSAV sur npm en cours (actuelle: v{0} -> cible: v{1})...', steps.npm-versions.outputs.current_version, steps.npm-versions.outputs.target_version)
             }}
+
+      - name: 🔑 Generate GitHub App token
+        id: app-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.DSAV_GH_APP_ID }}
+          private_key: ${{ secrets.DSAV_GH_APP_PRIVATE_KEY }}
+
+      - name: ⬇️ Checkout repo with App token
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: 🔧 Setup Node + install
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
 
       - name: 🖊️ Configure Git user
         run: |
