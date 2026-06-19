@@ -2,6 +2,11 @@ name: "Qualif Deployment Workflow"
 
 on:
   workflow_call:
+    inputs:
+      run_e2e_tests:
+        required: false
+        type: boolean
+        default: true
     secrets:
       GH_APP_ID:
         required: true
@@ -79,7 +84,7 @@ jobs:
   e2e:
     name: "Run E2E Tests"
     needs: [ check ]
-    if: ${{ needs.check.outputs.should_run == 'true' }}
+    if: ${{ needs.check.outputs.should_run == 'true' && inputs.run_e2e_tests == true }}
     runs-on:
       group: Default
       labels:
@@ -181,8 +186,8 @@ jobs:
           keep_files: true
 
   deploy:
-    needs: [check, e2e]
-    if: ${{ success() && needs.check.outputs.should_run == 'true' }}
+    needs: [ check, e2e ]
+    if: ${{ needs.check.outputs.should_run == 'true' && (inputs.run_e2e_tests == false || needs.e2e.result == 'success') }}
     runs-on:
       group: Default
       labels:
@@ -226,7 +231,7 @@ jobs:
           owner: ${{ vars.ORG }}
 
       - name: 💬 Comment all US in In Review (tests failed)
-        if: ${{ needs.e2e.result != 'success' || needs.deploy.result != 'success' }}
+        if: ${{ (inputs.run_e2e_tests == true && needs.e2e.result != 'success') || needs.deploy.result != 'success' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/group-issues-commentary@main
         with:
           token: ${{ steps.app.outputs.app-token }}
@@ -239,7 +244,7 @@ jobs:
           us_issue_type: ${{ vars.US_ISSUE_TYPE }}
 
       - name: 🧭 Move US to Recette in Project
-        if: ${{ needs.e2e.result == 'success' && needs.deploy.result == 'success' }}
+        if: ${{ (inputs.run_e2e_tests == false || needs.e2e.result == 'success') && needs.deploy.result == 'success' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/group-issues-status-update@main
         with:
           token: ${{ steps.app.outputs.app-token }}
@@ -250,7 +255,7 @@ jobs:
           us_issue_type: ${{ vars.US_ISSUE_TYPE }}
 
       - name: Build message
-        if: ${{ needs.e2e.result == 'success' && needs.deploy.result == 'success' }}
+        if: ${{ (inputs.run_e2e_tests == false || needs.e2e.result == 'success') && needs.deploy.result == 'success' }}
         id: build_message
         uses: avenirs-esr/avenirs-workflows/.github/actions/build-us-column-message@main
         with:
@@ -270,7 +275,7 @@ jobs:
           org: ${{ vars.ORG }}
 
       - name: 🚀 Notify Rocket.Chat
-        if: ${{ needs.e2e.result == 'success' && needs.deploy.result == 'success' }}
+        if: ${{ (inputs.run_e2e_tests == false || needs.e2e.result == 'success') && needs.deploy.result == 'success' }}
         uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
         with:
           api-url: ${{ secrets.ROCKETCHAT_API_URL }}
@@ -287,8 +292,8 @@ jobs:
   notify:
     name: 🚀 Notify Rocket.Chat
     needs: [check, e2e, publish-report, deploy]
-    runs-on: ubuntu-latest
     if: ${{ always() && needs.check.outputs.should_run == 'true' }}
+    runs-on: ubuntu-latest
 
     steps:
       - name: 🚀 Send Rocket.Chat notification
@@ -300,7 +305,7 @@ jobs:
           channel: ${{ vars.ROCKET_CHAT_NOTIFICATION_CANAL }}
           message: |
             ${{
-              needs.e2e.result == 'success' && needs.deploy.result == 'success' &&
+              (inputs.run_e2e_tests == false || needs.e2e.result == 'success') && needs.deploy.result == 'success' &&
               '🚀 【BOT】 Déploiement réussi sur qualif' ||
 
               needs.e2e.result == 'failure' &&
@@ -312,7 +317,7 @@ jobs:
               '❌ 【BOT】 Déploiement échoué sur qualif'
             }}
             ${{
-              !(needs.e2e.result == 'success' && needs.deploy.result == 'success') &&
+              !((inputs.run_e2e_tests == false || needs.e2e.result == 'success') && needs.deploy.result == 'success') &&
               format('🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) ||
               ''
             }}
