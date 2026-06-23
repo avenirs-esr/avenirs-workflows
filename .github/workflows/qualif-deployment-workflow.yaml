@@ -187,7 +187,7 @@ jobs:
 
   deploy:
     needs: [ check, e2e ]
-    if: ${{ needs.check.outputs.should_run == 'true' && (inputs.run_e2e_tests == false || needs.e2e.result == 'success') }}
+    if: ${{ always() && needs.check.outputs.should_run == 'true' && (inputs.run_e2e_tests == false || needs.e2e.result == 'success') }}
     runs-on:
       group: Default
       labels:
