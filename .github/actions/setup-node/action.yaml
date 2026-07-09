@@ -25,7 +25,7 @@ runs:
       if: ${{ inputs.run-npm-command == 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: npm install -g npm@latest
+      run: npm install -g npm@10.9.2
 
     - name: Install dependencies with npm ci
       if: ${{ inputs.run-npm-command == 'true' }}
