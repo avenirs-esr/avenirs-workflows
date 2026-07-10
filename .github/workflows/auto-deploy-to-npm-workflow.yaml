@@ -3,6 +3,10 @@ name: Autodeploy to npm (no need to run it)
 on:
   workflow_call:
 
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
 jobs:
   publish-to-npm:
     runs-on: ubuntu-latest
@@ -48,7 +52,7 @@ jobs:
           exit $code
 
       - name: 🚀 Publish to npm
-        run: npm publish
+        run: npm publish --provenance
 
       - name: 🏷️ Resolve published version
         id: published-version
