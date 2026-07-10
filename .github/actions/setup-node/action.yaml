@@ -17,7 +17,7 @@ runs:
     - name: Set up Node.js 22 with npm cache
       uses: actions/setup-node@v4
       with:
-        node-version: '22.22.1'
+        node-version: '22.22.2'
         cache: ${{ inputs.run-npm-command == 'true' && 'npm' || '' }}
         cache-dependency-path: ${{ inputs.working-directory }}
 
@@ -25,7 +25,7 @@ runs:
       if: ${{ inputs.run-npm-command == 'true' }}
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: npm install -g npm@10.9.2
+      run: npm install -g npm@latest
 
     - name: Install dependencies with npm ci
       if: ${{ inputs.run-npm-command == 'true' }}
