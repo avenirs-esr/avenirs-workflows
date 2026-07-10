@@ -30,6 +30,8 @@ jobs:
 
       - name: 🔧 Setup Node + install
         uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+        with:
+          npm-version: latest
 
       - name: 🏗️ Build project
         run: npm run build-only
