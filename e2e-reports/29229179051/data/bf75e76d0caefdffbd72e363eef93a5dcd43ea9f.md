@@ -1,0 +1,336 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - link "Accueil - Cofolio Staff" [ref=e12] [cursor=pointer]:
+          - /url: /cofolio/staff
+          - img [ref=e13]
+        - button "Changer d'univers" [ref=e17] [cursor=pointer]:
+          - generic [ref=e20]: Changer d'univers
+      - generic [ref=e22]:
+        - list [ref=e25]:
+          - listitem [ref=e26]:
+            - button "Notifications" [ref=e29] [cursor=pointer]:
+              - generic [ref=e32]: Notifications
+          - listitem [ref=e33]:
+            - button "L. tessier" [ref=e36] [cursor=pointer]:
+              - generic [ref=e39]: L. tessier
+        - navigation [ref=e42]:
+          - button "FR" [ref=e45] [cursor=pointer]:
+            - generic [ref=e48]: FR
+    - navigation "Menu principal" [ref=e52]:
+      - list [ref=e53]:
+        - listitem [ref=e54]:
+          - link "ACCUEIL" [ref=e55] [cursor=pointer]:
+            - /url: /cofolio/staff
+            - generic [ref=e58]: ACCUEIL
+        - listitem [ref=e59]:
+          - link "BIBLIOTHÈQUE DES ACTIVITÉS" [ref=e60] [cursor=pointer]:
+            - /url: /cofolio/staff/activities
+            - generic [ref=e63]: BIBLIOTHÈQUE DES ACTIVITÉS
+        - listitem [ref=e64]:
+          - button "SUIVI DES APPRENANTS" [ref=e65] [cursor=pointer]:
+            - generic [ref=e66]: SUIVI DES APPRENANTS
+  - main [ref=e67]:
+    - generic [ref=e68]:
+      - generic [ref=e70]:
+        - navigation "Fil d'Ariane" [ref=e71]:
+          - list [ref=e73]:
+            - listitem [ref=e74]:
+              - link "Accueil" [ref=e75] [cursor=pointer]:
+                - /url: /cofolio/staff
+            - listitem [ref=e76]:
+              - generic: Bibliothèque des activités
+        - heading "Ma bibliothèque d'activités" [level=1] [ref=e77]
+      - generic [ref=e78]:
+        - tablist "Liste d’onglets" [ref=e79]:
+          - tab "Mon espace de travail" [active] [selected] [ref=e80] [cursor=pointer]:
+            - generic [ref=e83]: Mon espace de travail
+          - tab "Toutes les activités publiées" [ref=e84] [cursor=pointer]:
+            - generic [ref=e87]: Toutes les activités publiées
+        - tabpanel "Mon espace de travail" [ref=e88]:
+          - generic [ref=e89]:
+            - text: Mon espace de travail (44)
+            - button "Créer une activité" [ref=e91] [cursor=pointer]:
+              - generic [ref=e94]: Créer une activité
+            - generic [ref=e96]:
+              - generic [ref=e97]:
+                - generic [ref=e99]:
+                  - generic [ref=e100]: "Nombre de résultats par page :"
+                  - button "4" [ref=e102] [cursor=pointer]:
+                    - generic [ref=e103]: "4"
+                  - button "8" [ref=e105] [cursor=pointer]:
+                    - generic [ref=e106]: "8"
+                  - generic [ref=e107]:
+                    - button "12" [disabled] [pressed]:
+                      - generic: "12"
+                  - button "20" [ref=e109] [cursor=pointer]:
+                    - generic [ref=e110]: "20"
+                - navigation "Pagination haute" [ref=e111]:
+                  - list [ref=e112]:
+                    - listitem [ref=e113]: Page 1 sur 4
+                    - listitem
+                    - listitem [ref=e114]:
+                      - link "Page précédente" [disabled]:
+                        - /url: "#page-1"
+                    - listitem [ref=e115]:
+                      - link "Page suivante" [ref=e118] [cursor=pointer]:
+                        - /url: "#page-2"
+                    - listitem
+              - table [ref=e123]:
+                - rowgroup [ref=e124]:
+                  - row "Nom de l'activité Dernière modification Propriétaire Statut Actions" [ref=e125]:
+                    - columnheader "Nom de l'activité" [ref=e126]
+                    - columnheader "Dernière modification" [ref=e127]
+                    - columnheader "Propriétaire" [ref=e128]
+                    - columnheader "Statut" [ref=e129]
+                    - columnheader "Actions" [ref=e130]
+                - rowgroup [ref=e131]:
+                  - row "Rédiger une lettre de motivation Il y a 3 minutes Lucas Tessier Plus d'actions" [ref=e132]:
+                    - cell "Rédiger une lettre de motivation" [ref=e133]:
+                      - generic [ref=e134]:
+                        - link "Rédiger une lettre de motivation" [ref=e135] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/DRAFT/8c5d1f77-2a9e-4b33-9f6c-1e4b7a2d9c11
+                        - status [ref=e136]:
+                          - generic [ref=e137]: CV
+                    - cell "Il y a 3 minutes" [ref=e138]
+                    - cell "Lucas Tessier" [ref=e139]
+                    - cell [ref=e140]:
+                      - status [ref=e141]:
+                        - generic [ref=e142]: brouillon
+                    - cell "Plus d'actions" [ref=e143]:
+                      - button "Plus d'actions" [ref=e148] [cursor=pointer]
+                  - row "Identifier ses centres d'intérêt 24/06/2026 Lucas Tessier Plus d'actions" [ref=e151]:
+                    - cell "Identifier ses centres d'intérêt" [ref=e152]:
+                      - generic [ref=e153]:
+                        - link "Identifier ses centres d'intérêt" [ref=e154] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/DRAFT/1bee1024-6b87-4e0a-a506-32d7a841b1b9
+                        - status [ref=e155]:
+                          - generic [ref=e156]: Me connaître
+                    - cell "24/06/2026" [ref=e157]
+                    - cell "Lucas Tessier" [ref=e158]
+                    - cell [ref=e159]:
+                      - status [ref=e160]:
+                        - generic [ref=e161]: brouillon
+                    - cell "Plus d'actions" [ref=e162]:
+                      - button "Plus d'actions" [ref=e167] [cursor=pointer]
+                  - row "Clarifier son identité personnelle 24/06/2026 Lucas Tessier Plus d'actions" [ref=e170]:
+                    - cell "Clarifier son identité personnelle" [ref=e171]:
+                      - generic [ref=e172]:
+                        - link "Clarifier son identité personnelle" [ref=e173] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/DRAFT/d07e0275-fb54-4c0c-ba9c-10133f606520
+                        - status [ref=e174]:
+                          - generic [ref=e175]: Me connaître
+                    - cell "24/06/2026" [ref=e176]
+                    - cell "Lucas Tessier" [ref=e177]
+                    - cell [ref=e178]:
+                      - status [ref=e179]:
+                        - generic [ref=e180]: brouillon
+                    - cell "Plus d'actions" [ref=e181]:
+                      - button "Plus d'actions" [ref=e186] [cursor=pointer]
+                  - row "Identifier ses motivations profondes 24/06/2026 Lucas Tessier Plus d'actions" [ref=e189]:
+                    - cell "Identifier ses motivations profondes" [ref=e190]:
+                      - generic [ref=e191]:
+                        - link "Identifier ses motivations profondes" [ref=e192] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/DRAFT/75014daa-8a87-4f73-895a-042bbaa902d4
+                        - status [ref=e193]:
+                          - generic [ref=e194]: Me connaître
+                    - cell "24/06/2026" [ref=e195]
+                    - cell "Lucas Tessier" [ref=e196]
+                    - cell [ref=e197]:
+                      - status [ref=e198]:
+                        - generic [ref=e199]: brouillon
+                    - cell "Plus d'actions" [ref=e200]:
+                      - button "Plus d'actions" [ref=e205] [cursor=pointer]
+                  - row "Définir ses valeurs 24/06/2026 Lucas Tessier Plus d'actions" [ref=e208]:
+                    - cell "Définir ses valeurs" [ref=e209]:
+                      - generic [ref=e210]:
+                        - link "Définir ses valeurs" [ref=e211] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/DRAFT/8e6e8878-1fa3-481a-a764-f32c233c3971
+                        - status [ref=e212]:
+                          - generic [ref=e213]: Me connaître
+                    - cell "24/06/2026" [ref=e214]
+                    - cell "Lucas Tessier" [ref=e215]
+                    - cell [ref=e216]:
+                      - status [ref=e217]:
+                        - generic [ref=e218]: brouillon
+                    - cell "Plus d'actions" [ref=e219]:
+                      - button "Plus d'actions" [ref=e224] [cursor=pointer]
+                  - row "Renforcer sa communication orale 23/06/2026 Lucas Tessier Plus d'actions" [ref=e227]:
+                    - cell "Renforcer sa communication orale" [ref=e228]:
+                      - generic [ref=e229]:
+                        - link "Renforcer sa communication orale" [ref=e230] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/PUBLISHED/2c9e4b77-6a1f-4d55-8b3c-7e2d1a9f4c22
+                        - status [ref=e231]:
+                          - generic [ref=e232]: Transverse
+                    - cell "23/06/2026" [ref=e233]
+                    - cell "Lucas Tessier" [ref=e234]
+                    - cell [ref=e235]:
+                      - status [ref=e236]:
+                        - generic [ref=e237]: publiée
+                    - cell "Plus d'actions" [ref=e238]:
+                      - button "Plus d'actions" [ref=e243] [cursor=pointer]
+                  - row "Développer son esprit d'équipe 23/06/2026 Lucas Tessier Plus d'actions" [ref=e246]:
+                    - cell "Développer son esprit d'équipe" [ref=e247]:
+                      - generic [ref=e248]:
+                        - link "Développer son esprit d'équipe" [ref=e249] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/PUBLISHED/5f2a7c91-8d4e-4b22-9a6c-3e1f7d2b4c99
+                        - status [ref=e250]:
+                          - generic [ref=e251]: Transverse
+                    - cell "23/06/2026" [ref=e252]
+                    - cell "Lucas Tessier" [ref=e253]
+                    - cell [ref=e254]:
+                      - status [ref=e255]:
+                        - generic [ref=e256]: publiée
+                    - cell "Plus d'actions" [ref=e257]:
+                      - button "Plus d'actions" [ref=e262] [cursor=pointer]
+                  - row "Rédiger une lettre de motivation 23/06/2026 Lucas Tessier Plus d'actions" [ref=e265]:
+                    - cell "Rédiger une lettre de motivation" [ref=e266]:
+                      - generic [ref=e267]:
+                        - link "Rédiger une lettre de motivation" [ref=e268] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/PUBLISHED/8c5d1f77-2a9e-4b33-9f6c-1e4b7a2d9c11
+                        - status [ref=e269]:
+                          - generic [ref=e270]: CV
+                    - cell "23/06/2026" [ref=e271]
+                    - cell "Lucas Tessier" [ref=e272]
+                    - cell [ref=e273]:
+                      - status [ref=e274]:
+                        - generic [ref=e275]: publiée
+                    - cell "Plus d'actions" [ref=e276]:
+                      - button "Plus d'actions" [ref=e281] [cursor=pointer]
+                  - row "Structurer son CV 23/06/2026 Lucas Tessier Plus d'actions" [ref=e284]:
+                    - cell "Structurer son CV" [ref=e285]:
+                      - generic [ref=e286]:
+                        - link "Structurer son CV" [ref=e287] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/PUBLISHED/3b7a2c91-6d4e-4f88-8c1a-5e9f2b7d4c66
+                        - status [ref=e288]:
+                          - generic [ref=e289]: CV
+                    - cell "23/06/2026" [ref=e290]
+                    - cell "Lucas Tessier" [ref=e291]
+                    - cell [ref=e292]:
+                      - status [ref=e293]:
+                        - generic [ref=e294]: publiée
+                    - cell "Plus d'actions" [ref=e295]:
+                      - button "Plus d'actions" [ref=e300] [cursor=pointer]
+                  - row "Analyser une réorientation 23/06/2026 Lucas Tessier Plus d'actions" [ref=e303]:
+                    - cell "Analyser une réorientation" [ref=e304]:
+                      - generic [ref=e305]:
+                        - link "Analyser une réorientation" [ref=e306] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/PUBLISHED/1f8b3c77-5d2a-4e66-9a4c-7b2e6d9f1a55
+                        - status [ref=e307]:
+                          - generic [ref=e308]: Mes trajectoires
+                    - cell "23/06/2026" [ref=e309]
+                    - cell "Lucas Tessier" [ref=e310]
+                    - cell [ref=e311]:
+                      - status [ref=e312]:
+                        - generic [ref=e313]: publiée
+                    - cell "Plus d'actions" [ref=e314]:
+                      - button "Plus d'actions" [ref=e319] [cursor=pointer]
+                  - row "Retracer les étapes clés de son parcours 23/06/2026 Lucas Tessier Plus d'actions" [ref=e322]:
+                    - cell "Retracer les étapes clés de son parcours" [ref=e323]:
+                      - generic [ref=e324]:
+                        - link "Retracer les étapes clés de son parcours" [ref=e325] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/PUBLISHED/6a4c2e91-8f7d-4b22-9a1f-3c5e7d2b8f10
+                        - status [ref=e326]:
+                          - generic [ref=e327]: Mes trajectoires
+                    - cell "23/06/2026" [ref=e328]
+                    - cell "Lucas Tessier" [ref=e329]
+                    - cell [ref=e330]:
+                      - status [ref=e331]:
+                        - generic [ref=e332]: publiée
+                    - cell "Plus d'actions" [ref=e333]:
+                      - button "Plus d'actions" [ref=e338] [cursor=pointer]
+                  - row "Identifier ses réussites marquantes 23/06/2026 Lucas Tessier Plus d'actions" [ref=e341]:
+                    - cell "Identifier ses réussites marquantes" [ref=e342]:
+                      - generic [ref=e343]:
+                        - link "Identifier ses réussites marquantes" [ref=e344] [cursor=pointer]:
+                          - /url: /cofolio/staff/activities/PUBLISHED/9e2b6a41-3c7d-4f99-8a55-2d1c6b7e4f33
+                        - status [ref=e345]:
+                          - generic [ref=e346]: Mes expériences
+                    - cell "23/06/2026" [ref=e347]
+                    - cell "Lucas Tessier" [ref=e348]
+                    - cell [ref=e349]:
+                      - status [ref=e350]:
+                        - generic [ref=e351]: publiée
+                    - cell "Plus d'actions" [ref=e352]:
+                      - button "Plus d'actions" [ref=e357] [cursor=pointer]
+              - navigation "Pagination basse" [ref=e361]:
+                - list [ref=e362]:
+                  - listitem [ref=e363]:
+                    - link "Première page" [disabled]:
+                      - /url: "#page-1"
+                      - generic: Première page
+                  - listitem [ref=e364]:
+                    - link "Page précédente" [disabled]:
+                      - /url: "#page-1"
+                  - listitem [ref=e365]:
+                    - link "1" [ref=e366] [cursor=pointer]:
+                      - /url: "#page-1"
+                  - listitem [ref=e367]:
+                    - link "2" [ref=e368] [cursor=pointer]:
+                      - /url: "#page-2"
+                  - listitem [ref=e369]:
+                    - link "3" [ref=e370] [cursor=pointer]:
+                      - /url: "#page-3"
+                      - text: "3"
+                      - generic [ref=e371]: ...
+                  - listitem [ref=e372]:
+                    - link "Page suivante" [ref=e375] [cursor=pointer]:
+                      - /url: "#page-2"
+                  - listitem [ref=e378]:
+                    - link "Dernière page" [ref=e381] [cursor=pointer]:
+                      - /url: "#page-4"
+                      - generic [ref=e382]: Dernière page
+  - contentinfo [ref=e385]:
+    - generic [ref=e387]:
+      - generic [ref=e388]:
+        - link "Logo ANR" [ref=e389] [cursor=pointer]:
+          - /url: https://anr.fr/ProjetIA-21-DMAV-0001
+          - img "Logo ANR" [ref=e390]
+        - link "Logo France 2030" [ref=e391] [cursor=pointer]:
+          - /url: https://www.info.gouv.fr/actualite/france-2030-attractivite-de-l-excellence-universitaire-francaise-le-gouvernement-investit-pres-de
+          - img "Logo France 2030" [ref=e392]
+      - generic [ref=e393]: Ce travail a bénéficié d'une aide de l'État gérée par l'Agence Nationale de la Recherche au titre du programme d'investissements d'avenir intégré à France 2030, portant la référence ANR-21-DMAV-0001
+    - generic [ref=e394]:
+      - generic [ref=e395]:
+        - img "Logo Cofolio" [ref=e396]
+        - generic [ref=e408]: Un ePortfolio pour l'Enseignement Supérieur et la Recherche
+      - generic [ref=e409]:
+        - generic [ref=e410]:
+          - generic [ref=e411]: Informations légales
+          - list [ref=e412]:
+            - listitem [ref=e413]:
+              - 'link "Accessibilité : partiellement conforme" [ref=e414] [cursor=pointer]':
+                - /url: /cofolio/staff/accessibility
+            - listitem [ref=e415]:
+              - link "Mentions légales" [ref=e416] [cursor=pointer]:
+                - /url: /cofolio/staff/legal
+            - listitem [ref=e417]:
+              - link "Données personnelles" [ref=e418] [cursor=pointer]:
+                - /url: /cofolio/staff/personal-data
+            - listitem [ref=e419]:
+              - link "Gestion des cookies" [ref=e420] [cursor=pointer]:
+                - /url: /cofolio/staff/cookies
+        - generic [ref=e421]:
+          - generic [ref=e422]: Autres sites
+          - list [ref=e423]:
+            - listitem [ref=e424]:
+              - link "Volet ESR du programme AVENIR(s) - Accueil" [ref=e425] [cursor=pointer]:
+                - /url: https://avenirs-esr.fr/
+                - text: avenirs-esr.fr
+        - generic [ref=e426]:
+          - generic [ref=e427]: Partenaires
+          - generic [ref=e428]:
+            - link "Volet ESR du programme AVENIR(s) - Accueil" [ref=e429] [cursor=pointer]:
+              - /url: https://avenirs-esr.fr/
+              - img "Logo Avenir(s) ESR" [ref=e430]
+            - link "Communauté d'établissements français d'enseignement supérieur pour l'innovation numérique - Accueil" [ref=e431] [cursor=pointer]:
+              - /url: https://www.esup-portail.org/
+              - img "Logo Esup Portail" [ref=e433]
+    - link "@ESUP-Portail. Tous droits réservés. - Accueil" [ref=e437] [cursor=pointer]:
+      - /url: https://www.esup-portail.org/
+      - text: "@ESUP-Portail. Tous droits réservés."
+```
