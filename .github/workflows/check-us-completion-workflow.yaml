@@ -26,6 +26,12 @@ on:
         value: ${{ jobs.check.outputs.parent_issue_node_id }}
       parent_issue_number:
         value: ${{ jobs.check.outputs.parent_issue_number }}
+      parent_issue_title:
+        description: "Title of the parent issue"
+        value: ${{ jobs.check.outputs.parent_issue_title }}
+      parent_issue_type:
+        description: "Issue type name of the parent issue (e.g. User Story, Enabler Story)"
+        value: ${{ jobs.check.outputs.parent_issue_type }}
 
 permissions:
   issues: read
@@ -40,6 +46,8 @@ jobs:
       test_task: ${{ steps.check_test_task.outputs.test_task }}
       parent_issue_node_id: ${{ steps.parent.outputs.parent_issue_node_id }}
       parent_issue_number: ${{ steps.parent.outputs.parent_issue_number }}
+      parent_issue_title: ${{ steps.check_us.outputs.parent_issue_title }}
+      parent_issue_type: ${{ steps.check_us.outputs.parent_issue_type }}
 
     steps:
       - name: 👮‍♂️ Check if parent US is complete
@@ -93,13 +101,13 @@ jobs:
           app_private_key: ${{ secrets.GH_APP_TOKEN }}
           owner: ${{ vars.ORG }}
 
-      - name: 💬 Comment missing [QUALIF] task on parent US
+      - name: 💬 Comment missing [QUALIF] task on parent issue
         uses: avenirs-esr/avenirs-workflows/.github/actions/comment-on-issue@main
         with:
           token: ${{ steps.app.outputs.app-token }}
           issue_node_id: ${{ needs.check.outputs.parent_issue_node_id }}
           body: |
-            ⚠️ Cette User Story ne peut pas être considérée comme complète car aucune sous-tâche de test n’a été détectée.
+            ⚠️ **[${{ needs.check.outputs.parent_issue_type }}]** ${{ needs.check.outputs.parent_issue_title }} ne peut pas être considérée comme complète car aucune sous-tâche de test n’a été détectée.
             Merci d’ajouter une sub-task dont le titre contient `[QUALIF]`.
 
   update-us-status:

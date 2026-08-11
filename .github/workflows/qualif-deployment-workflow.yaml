@@ -261,8 +261,8 @@ jobs:
         with:
           issues_json: ${{ needs.check.outputs.issues_json }}
           count: ${{ needs.check.outputs.count }}
-          header_message: "🧪 Nouvelle(s) US déployée(s) sur qualif et prête(s) pour recette :"
-          empty_message: "ℹ️ Aucune User Story déployée sur qualif."
+          header_message: "🧪 Nouvel(s) élément(s) déployé(s) sur qualif et prêt(s) pour recette :"
+          empty_message: "ℹ️ Aucun élément déployé sur qualif."
 
       - name: 🔍 Get US in In Review
         id: get_us_in_recette
@@ -287,7 +287,7 @@ jobs:
 
             ${{ steps.build_message.outputs.message }}
 
-            Pour info, il y a ${{ steps.get_us_in_recette.outputs.count }} US dans la colonne Recette ( ${{ vars.COFOLIO_PROJECT_URL }} ).
+            Pour info, il y a ${{ steps.get_us_in_recette.outputs.count }} élément(s) dans la colonne Recette ( ${{ vars.COFOLIO_PROJECT_URL }} ).
 
   notify:
     name: 🚀 Notify Rocket.Chat

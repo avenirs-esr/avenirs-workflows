@@ -10,11 +10,11 @@ inputs:
     description: "Number of issues found"
   empty_message:
     required: false
-    default: "ℹ️ Aucune User Story trouvée dans la colonne Recette."
+    default: "ℹ️ Aucun élément trouvé dans la colonne Recette."
     description: "Message to display when no issue is found"
   header_message:
     required: false
-    default: "🧪 User Stories actuellement dans Recette :"
+    default: "🧪 Éléments actuellement dans Recette :"
     description: "Header message displayed before the list"
 
 outputs:
@@ -51,7 +51,7 @@ runs:
           if [ "${COUNT}" = "0" ]; then
             printf '%s\n' "${EMPTY_MESSAGE}"
           else
-            ISSUE_LINES="$(echo "${ISSUES_JSON}" | jq -r '.[] | "- [US#\(.number)](\(.url)) : \(.title | gsub("\\["; "(") | gsub("\\]"; ")"))"')"
+            ISSUE_LINES="$(echo "${ISSUES_JSON}" | jq -r '.[] | "- **[\(.issue_type // "?")]** [#\(.number)](\(.url)) : \(.title | gsub("\\["; "(") | gsub("\\]"; ")"))"')"
             printf '%s\n\n%s\n' "${HEADER_MESSAGE}" "${ISSUE_LINES}"
           fi
 

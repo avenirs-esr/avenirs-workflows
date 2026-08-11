@@ -15,8 +15,14 @@ inputs:
 
 outputs:
   should_run:
-    description: "true if parent is User Story AND all its sub-issues are done/closed"
+    description: "true if parent's issue type matches one of us_issue_type AND all its sub-issues are done/closed"
     value: ${{ steps.check.outputs.should_run }}
+  parent_issue_title:
+    description: "Title of the parent issue, empty if should_run is false"
+    value: ${{ steps.check.outputs.parent_issue_title }}
+  parent_issue_type:
+    description: "Issue type name of the parent issue, empty if should_run is false"
+    value: ${{ steps.check.outputs.parent_issue_type }}
 
 runs:
   using: "composite"
