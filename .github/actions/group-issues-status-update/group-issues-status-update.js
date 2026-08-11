@@ -1,4 +1,4 @@
-const { reqEnv, norm } = require("../_shared/utils");
+const { reqEnv, norm, normList } = require("../_shared/utils");
 const {
   gql,
   findProjectSingleSelectField,
@@ -14,7 +14,8 @@ const {
   const statusFieldName = "Status";
   const fromStatusName = (process.env.FROM_STATUS_NAME || "In Review").trim();
   const targetStatusName = (process.env.TARGET_STATUS_NAME || "Recette").trim();
-  const wantedUsType = (process.env.US_ISSUE_TYPE || "User Story").trim();
+  // US_ISSUE_TYPE accepts a comma-separated list (e.g. "User Story,Enabler Story").
+  const wantedTypes = normList(process.env.US_ISSUE_TYPE || "User Story", { stripEmoji: true });
 
   const qProject = `
     query($org: String!, $number: Int!) {
@@ -117,7 +118,7 @@ const {
       const issue = node?.content;
       if (!issue || issue.__typename !== "Issue") continue;
 
-      if (norm(issue.issueType?.name, { stripEmoji: true }) !== norm(wantedUsType, { stripEmoji: true })) {
+      if (!wantedTypes.includes(norm(issue.issueType?.name, { stripEmoji: true }))) {
         continue;
       }
 

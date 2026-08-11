@@ -1,6 +1,7 @@
 const {
   reqEnv,
   norm,
+  normList,
   appendOutputs,
   isCurrentSprintToken,
   findProjectIterationField,
@@ -30,7 +31,8 @@ const {
   const sprintFieldName = "Sprint";
 
   const targetStatusName = (process.env.TARGET_STATUS_NAME || "In Review").trim();
-  const wantedIssueType = (process.env.ISSUE_TYPE || "User Story").trim();
+  // ISSUE_TYPE accepts a comma-separated list (e.g. "User Story,Enabler Story").
+  const wantedIssueTypes = normList(process.env.ISSUE_TYPE || "User Story", { stripEmoji: true });
   const sprintInput = (process.env.SPRINT || "").trim();
 
   const query = `
@@ -196,7 +198,7 @@ const {
       if (!issue || issue.__typename !== "Issue") continue;
 
       const issueTypeName = issue.issueType?.name ?? "";
-      if (norm(issueTypeName, { stripEmoji: true }) !== norm(wantedIssueType, { stripEmoji: true })) {
+      if (!wantedIssueTypes.includes(norm(issueTypeName, { stripEmoji: true }))) {
         continue;
       }
 
@@ -244,7 +246,7 @@ const {
   });
 
   console.log(
-    `✅ Found ${matchingIssues.length} "${wantedIssueType}" issue(s) in "${targetStatusName}"` +
+    `✅ Found ${matchingIssues.length} "${wantedIssueTypes.join(", ")}" issue(s) in "${targetStatusName}"` +
     `${resolvedSprint ? ` and sprint "${resolvedSprint}"` : ""} (Project #${projectNumber}).`
   );
 })().catch((error) => {

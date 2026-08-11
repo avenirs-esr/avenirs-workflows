@@ -17,7 +17,7 @@ inputs:
   us_issue_type:
     required: false
     default: "User Story"
-    description: "Expected issue type name for a User Story"
+    description: "Comma-separated list of accepted issue type names (e.g. \"User Story,Enabler Story\"). Defaults to \"User Story\" only."
   completed_status_names:
     required: false
     default: "In Review,Recette,Done"

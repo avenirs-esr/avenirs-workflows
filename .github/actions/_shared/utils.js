@@ -20,6 +20,13 @@ function norm(value, options = {}) {
   return result.replace(/\s+/g, " ").trim();
 }
 
+function normList(value, options = {}) {
+  return String(value ?? "")
+    .split(",")
+    .map((item) => norm(item, options))
+    .filter((item) => item.length > 0);
+}
+
 function appendOutput(key, value) {
   if (!process.env.GITHUB_OUTPUT) return;
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value ?? ""}\n`);
@@ -157,6 +164,7 @@ function resolveCurrentIterationTitle(iterationField, now = new Date()) {
 module.exports = {
   reqEnv,
   norm,
+  normList,
   appendOutput,
   appendOutputs,
   readJsonFile,

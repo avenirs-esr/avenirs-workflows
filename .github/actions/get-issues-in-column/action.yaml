@@ -19,7 +19,7 @@ inputs:
   issue_type:
     required: false
     default: "User Story"
-    description: "Issue type to look for in the column"
+    description: "Comma-separated list of issue types to look for in the column (e.g. \"User Story,Enabler Story\"). Defaults to \"User Story\" only."
   sprint:
     required: false
     default: ""
