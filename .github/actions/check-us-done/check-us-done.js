@@ -1,4 +1,4 @@
-const { reqEnv, norm, normList, appendOutput } = require("../_shared/utils");
+const { reqEnv, norm, normList, appendOutput, appendOutputs } = require("../_shared/utils");
 const { gql } = require("../_shared/github");
 
 (async () => {
@@ -12,7 +12,11 @@ const { gql } = require("../_shared/github");
     if (reason) {
       console.log(`ℹ️ ${reason}`);
     }
-    appendOutput("should_run", "false");
+    appendOutputs({
+      should_run: "false",
+      parent_issue_title: "",
+      parent_issue_type: "",
+    });
   };
 
   const query = `
@@ -21,6 +25,7 @@ const { gql } = require("../_shared/github");
         ... on Issue {
           parent {
             ... on Issue {
+              title
               issueType { name }
               subIssuesSummary { total completed percentCompleted }
               subIssues(first: 100) {
@@ -71,7 +76,11 @@ const { gql } = require("../_shared/github");
     );
   }
 
-  appendOutput("should_run", allClosed ? "true" : "false");
+  appendOutputs({
+    should_run: allClosed ? "true" : "false",
+    parent_issue_title: parent?.title ?? "",
+    parent_issue_type: parent?.issueType?.name ?? "",
+  });
 })().catch((error) => {
   console.error("❌ Error:", error);
   appendOutput("should_run", "false");
