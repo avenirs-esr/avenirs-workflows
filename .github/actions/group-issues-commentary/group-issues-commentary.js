@@ -1,4 +1,4 @@
-const { reqEnv, norm } = require("../_shared/utils");
+const { reqEnv, norm, normList } = require("../_shared/utils");
 const {
   gql,
   restPost,
@@ -13,7 +13,8 @@ const {
   const projectNumber = Number(reqEnv("PROJECT_NUMBER"));
   const fromStatusName = reqEnv("FROM_STATUS_NAME").trim();
   const body = reqEnv("BODY");
-  const wantedUsType = (process.env.US_ISSUE_TYPE || "User Story").trim();
+  // US_ISSUE_TYPE accepts a comma-separated list (e.g. "User Story,Enabler Story").
+  const wantedTypes = normList(process.env.US_ISSUE_TYPE || "User Story", { stripEmoji: true });
   const statusFieldName = "Status";
 
   const query = `
@@ -99,7 +100,7 @@ const {
       const issue = item?.content;
       if (!issue || issue.__typename !== "Issue") continue;
 
-      if (norm(issue.issueType?.name, { stripEmoji: true }) !== norm(wantedUsType, { stripEmoji: true })) {
+      if (!wantedTypes.includes(norm(issue.issueType?.name, { stripEmoji: true }))) {
         continue;
       }
 

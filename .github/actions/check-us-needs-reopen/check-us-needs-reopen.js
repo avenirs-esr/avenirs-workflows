@@ -1,4 +1,4 @@
-const { reqEnv, norm, appendOutputs } = require("../_shared/utils");
+const { reqEnv, norm, normList, appendOutputs } = require("../_shared/utils");
 const { gql } = require("../_shared/github");
 
 (async () => {
@@ -6,7 +6,8 @@ const { gql } = require("../_shared/github");
   const usIssueNodeId = reqEnv("US_ISSUE_NODE_ID");
   const org = reqEnv("ORG");
   const projectNumber = Number(reqEnv("PROJECT_NUMBER"));
-  const wantedUsType = reqEnv("US_ISSUE_TYPE");
+  // Comma-separated list of accepted issue types (e.g. "User Story,Enabler Story").
+  const wantedTypes = normList(reqEnv("US_ISSUE_TYPE"));
   const completedStatuses = reqEnv("COMPLETED_STATUS_NAMES")
     .split(",")
     .map((s) => norm(s, { stripEmoji: true }))
@@ -68,8 +69,8 @@ const { gql } = require("../_shared/github");
   }
 
   const issueTypeName = issue.issueType?.name ?? "";
-  if (norm(issueTypeName) !== norm(wantedUsType)) {
-    console.log(`Issue is not a User Story. Found issue type: "${issueTypeName}"`);
+  if (!wantedTypes.includes(norm(issueTypeName))) {
+    console.log(`Issue type "${issueTypeName}" does not match any of "${wantedTypes.join(", ")}".`);
     appendOutputs({
       should_reopen: "false",
       current_status: "",

@@ -23,7 +23,7 @@ inputs:
   us_issue_type:
     required: false
     default: "User Story"
-    description: "Name of the User Story issue type in the repo (used to filter issues to move, e.g. if there are multiple issue types in the project)"
+    description: "Comma-separated list of issue type names to include (e.g. \"User Story,Enabler Story\"). Defaults to \"User Story\" only."
 
 runs:
   using: "composite"

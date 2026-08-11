@@ -1,10 +1,12 @@
-const { reqEnv, norm, appendOutput } = require("../_shared/utils");
+const { reqEnv, norm, normList, appendOutput } = require("../_shared/utils");
 const { gql } = require("../_shared/github");
 
 (async () => {
   const token = reqEnv("TOKEN");
   const issueNodeId = reqEnv("ISSUE_NODE_ID");
-  const wantedType = norm(process.env.US_ISSUE_TYPE || "User Story");
+  // US_ISSUE_TYPE accepts a comma-separated list of issue types (e.g. "User Story,Enabler Story").
+  // Kept as a single value by default so existing callers are unaffected.
+  const wantedTypes = normList(process.env.US_ISSUE_TYPE || "User Story");
 
   const setFalse = (reason) => {
     if (reason) {
@@ -50,10 +52,10 @@ const { gql } = require("../_shared/github");
   }
 
   const parentType = norm(parent?.issueType?.name || "");
-  const isUserStory = parentType && parentType === wantedType;
+  const isMatchingType = parentType && wantedTypes.includes(parentType);
 
-  if (!isUserStory) {
-    setFalse(`Parent issueType "${parent?.issueType?.name ?? ""}" does not match "${process.env.US_ISSUE_TYPE}".`);
+  if (!isMatchingType) {
+    setFalse(`Parent issueType "${parent?.issueType?.name ?? ""}" does not match any of "${wantedTypes.join(", ")}".`);
     return;
   }
 
