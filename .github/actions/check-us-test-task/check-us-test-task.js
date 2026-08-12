@@ -1,4 +1,4 @@
-const { reqEnv, norm, appendOutput } = require("../_shared/utils");
+const { reqEnv, norm, normList, appendOutput } = require("../_shared/utils");
 const { gql } = require("../_shared/github");
 
 async function hasTestSubTask(token, parentIssueNodeId) {
@@ -79,6 +79,19 @@ async function hasTestSubTask(token, parentIssueNodeId) {
 (async () => {
   const token = reqEnv("TOKEN");
   const parentIssueNodeId = reqEnv("PARENT_ISSUE_NODE_ID");
+  // Optional: comma-separated list of issue types exempt from the [QUALIF]
+  // sub-task requirement (e.g. "Bug"). Empty by default, so existing
+  // callers keep requiring a [QUALIF] sub-task for every type.
+  const exemptTypes = normList(process.env.QUALIF_EXEMPT_ISSUE_TYPES || "");
+  const issueType = norm(process.env.ISSUE_TYPE || "");
+
+  if (exemptTypes.length > 0 && issueType && exemptTypes.includes(issueType)) {
+    console.log(
+      `ℹ️ Issue type "${process.env.ISSUE_TYPE}" is exempt from the [QUALIF] sub-task requirement (QUALIF_EXEMPT_ISSUE_TYPES="${process.env.QUALIF_EXEMPT_ISSUE_TYPES}"). Skipping check.`
+    );
+    appendOutput("test_task", "true");
+    return;
+  }
 
   const result = await hasTestSubTask(token, parentIssueNodeId);
 

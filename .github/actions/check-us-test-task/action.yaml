@@ -8,6 +8,14 @@ inputs:
   us_issue_node_id:
     required: true
     description: "GraphQL node_id of the parent User Story issue"
+  issue_type:
+    required: false
+    default: ""
+    description: "Issue type name of the parent issue, used against qualif_exempt_issue_types"
+  qualif_exempt_issue_types:
+    required: false
+    default: ""
+    description: "Comma-separated list of issue type names exempt from the [QUALIF] sub-task requirement (e.g. \"Bug\"). Empty by default: no exemption, same behaviour as before."
 
 outputs:
   test_task:
@@ -28,4 +36,6 @@ runs:
       env:
         TOKEN: ${{ inputs.token }}
         PARENT_ISSUE_NODE_ID: ${{ inputs.us_issue_node_id }}
+        ISSUE_TYPE: ${{ inputs.issue_type }}
+        QUALIF_EXEMPT_ISSUE_TYPES: ${{ inputs.qualif_exempt_issue_types }}
       run: node "$GITHUB_ACTION_PATH/check-us-test-task.js"
