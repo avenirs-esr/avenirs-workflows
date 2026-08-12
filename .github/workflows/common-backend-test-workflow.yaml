@@ -1,0 +1,82 @@
+name: Common Backend Workflow
+
+on:
+  workflow_call:
+    inputs:
+      run_lint:
+        type: boolean
+        default: true
+      run_security_scan:
+        type: boolean
+        default: true
+      run_unit_tests:
+        type: boolean
+        default: true
+      run_integration_tests:
+        type: boolean
+        default: true
+      page_title:
+        type: string
+        default: "${{ github.event.repository.name }} - Documentation"
+      lint_fail_on_error:
+        type: boolean
+        default: true
+      security_fail_on_critical:
+        type: boolean
+        default: true
+
+jobs:
+  liquibase-update-check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: avenirs_api
+          POSTGRES_USER: avenirs_api_admin
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        ports:
+          - 65432:5432
+        options: >-
+          --health-cmd="pg_isready -U avenirs_api_admin -d avenirs_api"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Prepare database schema
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          psql -h localhost -p 65432 -U avenirs_api_admin -d avenirs_api <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS dev AUTHORIZATION avenirs_api_admin;
+          CREATE EXTENSION IF NOT EXISTS citext;
+          CREATE EXTENSION IF NOT EXISTS pgcrypto;
+          SQL
+
+      - name: Validate changelog syntax
+        run: |
+          mvn liquibase:validate \
+            -Dliquibase.changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
+            -Dliquibase.url=jdbc:postgresql://localhost:65432/avenirs_api \
+            -Dliquibase.username=avenirs_api_admin \
+            -Dliquibase.password="${{ secrets.POSTGRES_PASSWORD }}" \
+            -Dliquibase.defaultSchemaName=dev
+
+      - name: Run Liquibase update
+        run: |
+          mvn liquibase:update \
+            -Dliquibase.changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
+            -Dliquibase.url=jdbc:postgresql://localhost:65432/avenirs_api \
+            -Dliquibase.username=avenirs_api_admin \
+            -Dliquibase.password="${{ secrets.POSTGRES_PASSWORD }}" \
+            -Dliquibase.defaultSchemaName=dev
