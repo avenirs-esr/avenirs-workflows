@@ -82,6 +82,8 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN }}
           us_issue_node_id: ${{ steps.parent.outputs.parent_issue_node_id }}
+          issue_type: ${{ steps.check_us.outputs.parent_issue_type }}
+          qualif_exempt_issue_types: ${{ vars.QUALIF_EXEMPT_ISSUE_TYPES }}
 
   comment-missing-test-task:
     needs: check
