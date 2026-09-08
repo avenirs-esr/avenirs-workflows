@@ -7,6 +7,9 @@ Ce fichier suit tous les changements notables apportés à ce dépôt, selon le 
 ## [Unreleased]
 
 ### ✨ Added
+- `common-backend-workflow` et l'action `tests-and-code-coverage` acceptent une entrée
+  `java_version` (défaut `21`), pour que chaque dépôt bascule vers Java 25 au rythme de sa
+  propre migration sans casser ceux qui sont encore en 21.
 - Initialisation du dépôt avec structure pour `actions` et `workflows`.
 
 ---

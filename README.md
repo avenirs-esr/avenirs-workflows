@@ -50,9 +50,23 @@ jobs:
     uses: avenirs-esr/avenirs-workflows/.github/workflows/common-backend-workflow.yaml@main
     with:
       project-name: my-app
+      java_version: "25"   # optionnel, 21 par défaut
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+### Entrées de `common-backend-workflow`
+
+| Entrée | Type | Défaut | Description |
+|---|---|---|---|
+| `run_lint` | boolean | `true` | Exécute la vérification de format. |
+| `run_security_scan` | boolean | `true` | Exécute l'analyse Trivy. |
+| `run_unit_tests` | boolean | `true` | Exécute les tests et la couverture. |
+| `run_integration_tests` | boolean | `true` | Inclut les tests d'intégration. |
+| `lint_fail_on_error` | boolean | `true` | Échoue si du code est mal formaté. |
+| `security_fail_on_critical` | boolean | `true` | Échoue sur vulnérabilité critique. |
+| `java_version` | string | `"21"` | JDK utilisé pour compiler et tester. |
+| `page_title` | string | nom du dépôt | Titre de la documentation publiée. |
 
 ---
 
