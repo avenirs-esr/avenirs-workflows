@@ -50,7 +50,7 @@ jobs:
     uses: avenirs-esr/avenirs-workflows/.github/workflows/common-backend-workflow.yaml@main
     with:
       project-name: my-app
-      java_version: "25"   # optionnel, 21 par défaut
+      java_version: "21"   # optionnel, 25 par défaut
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -65,7 +65,7 @@ jobs:
 | `run_integration_tests` | boolean | `true` | Inclut les tests d'intégration. |
 | `lint_fail_on_error` | boolean | `true` | Échoue si du code est mal formaté. |
 | `security_fail_on_critical` | boolean | `true` | Échoue sur vulnérabilité critique. |
-| `java_version` | string | `"21"` | JDK utilisé pour compiler et tester. |
+| `java_version` | string | `"25"` | JDK utilisé pour compiler et tester. |
 | `page_title` | string | nom du dépôt | Titre de la documentation publiée. |
 
 ---

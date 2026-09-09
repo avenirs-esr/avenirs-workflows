@@ -16,7 +16,7 @@ inputs:
   java_version:
     description: "JDK version used to compile and run the tests"
     required: false
-    default: "21"
+    default: "25"
 runs:
   using: "composite"
   steps:
