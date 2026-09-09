@@ -24,6 +24,9 @@ on:
       security_fail_on_critical:
         type: boolean
         default: true
+      java_version:
+        type: string
+        default: "25"
 
 jobs:
   setup:
@@ -102,6 +105,7 @@ jobs:
           ignore_ssl_verification: "true"
           import_certificate_from_localhost: "false"
           run_integration_tests: ${{ inputs.run_integration_tests }}
+          java_version: ${{ inputs.java_version }}
       - name: 📦 Save JaCoCo Report
         if: ${{ hashFiles('jacoco-report/**') != '' }}
         uses: actions/upload-artifact@v4

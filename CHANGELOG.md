@@ -7,6 +7,10 @@ Ce fichier suit tous les changements notables apportés à ce dépôt, selon le 
 ## [Unreleased]
 
 ### ✨ Added
+- Le JDK des pipelines backend passe de 21 à **25**.
+- `common-backend-workflow` et l'action `tests-and-code-coverage` acceptent une entrée
+  `java_version` (défaut `25`), pour qu'un dépôt encore en Java 21 puisse rester en arrière
+  en la passant explicitement.
 - Initialisation du dépôt avec structure pour `actions` et `workflows`.
 
 ---
