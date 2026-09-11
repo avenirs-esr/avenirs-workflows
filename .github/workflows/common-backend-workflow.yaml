@@ -55,6 +55,7 @@ jobs:
         uses: avenirs-esr/avenirs-workflows/.github/actions/linting-scan@main
         with:
           fail_if_unformatted: ${{ inputs.lint_fail_on_error }}
+          java-version: ${{ vars.JAVA_VERSION }}
       - name: 📦 Save Linting Report
         if: ${{ hashFiles('lint/**') != '' }}
         uses: actions/upload-artifact@v4
