@@ -1,14 +1,25 @@
 name: "Setup Google Java Format"
 description: "Installe Google Java Format"
+inputs:
+  java-version:
+    description: "Version Java au format <version>-<vendor> (ex: 25.0.4-oracle), issue de la variable d'organisation JAVA_VERSION"
+    required: true
 runs:
   using: "composite"
   steps:
-    - name: Install Java (OpenJDK 21)
+    - name: Parse Java version
+      id: parse_java_version
       run: |
-        sudo apt-get update
-        sudo apt-get install -y openjdk-21-jdk
-        java -version
+        JAVA_VERSION="${{ inputs.java-version }}"
+        echo "version=${JAVA_VERSION%-*}" >> "$GITHUB_OUTPUT"
+        echo "distribution=${JAVA_VERSION##*-}" >> "$GITHUB_OUTPUT"
       shell: bash
+
+    - name: Install Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: ${{ steps.parse_java_version.outputs.distribution }}
+        java-version: ${{ steps.parse_java_version.outputs.version }}
 
     - name: Install Google Java Format
       run: |

@@ -5,6 +5,10 @@ inputs:
     description: "Echoue si du code n'est pas correctement formaté (true/false)"
     required: false
     default: true
+  java-version:
+    description: "Version Java au format <version>-<vendor> (ex: 25.0.4-oracle), issue de la variable d'organisation JAVA_VERSION"
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -22,6 +26,8 @@ runs:
     - name: 🔧 Install Google Java Format (Java)
       if: env.project_type == 'java'
       uses: avenirs-esr/avenirs-workflows/.github/actions/setup-google-java-format@main
+      with:
+        java-version: ${{ inputs.java-version }}
 
     - name: 🔎 Check Java Code Formatting (google-java-format)
       if: env.project_type == 'java'
