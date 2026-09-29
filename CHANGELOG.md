@@ -7,6 +7,9 @@ Ce fichier suit tous les changements notables apportés à ce dépôt, selon le 
 ## [Unreleased]
 
 ### ✨ Added
+- Nouvelle action `inherit-parent-project-fields` et nouveau workflow réutilisable
+  `sub-issue-inherit-parent-fields-workflow` : à la création d'une sub-issue, celle-ci hérite du
+  `Status`, de la `Priority` et du `Sprint` de son issue parente dans le Project V2.
 - Le JDK des pipelines backend passe de 21 à **25**.
 - `common-backend-workflow` et l'action `tests-and-code-coverage` acceptent une entrée
   `java_version` (défaut `25`), pour qu'un dépôt encore en Java 21 puisse rester en arrière

@@ -76,6 +76,7 @@ jobs:
 |--------------------------------|-----------------------------------------------------------------------------------------|
 | `detect-project-type`          | Détecte automatiquement le type de projet.                                              |
 | `gh-action-utils`              | Utilitaires pour les workflows GitHub.                                                  |
+| `inherit-parent-project-fields` | Recopie les champs de projet (Status, Priority, Sprint...) d'une issue parente vers une sub-issue. |
 | `linting-scan`                 | Exécute des vérifications de linting.                                                   |
 | `load-tests`                   | Exécute des tests de charge automatisés.                                                |
 | `publish-to-gh-pages`          | Publie sur GitHub Pages.                                                                |
@@ -99,3 +100,49 @@ jobs:
 | `common-backend-workflow`     | Workflow commun pour les projets backend.         |
 | `common-frontend-workflow`    | Workflow commun pour les projets frontend.        |
 | `portfolio-security-workflow` | Workflow spécifique au projet portfolio sécurité. |
+| `sub-issue-inherit-parent-fields-workflow` | Fait hériter une sub-issue du Status, de la Priority et du Sprint de son parent. |
+
+---
+
+### 🧬 Héritage des champs de projet sur les sub-issues
+
+Le workflow `sub-issue-inherit-parent-fields-workflow` recopie les champs du projet (`Status`,
+`Priority`, `Sprint`) de l'issue parente vers la sub-issue qui vient d'être créée. Les issues qui
+n'ont pas de parent sont ignorées.
+
+```yaml
+# Exemple : .github/workflows/sub-issue-inherit-parent-fields-workflow.yaml
+name: "Sub-issue inherits parent project fields"
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+  repository-projects: write
+
+jobs:
+  call_remote:
+    uses: avenirs-esr/avenirs-workflows/.github/workflows/sub-issue-inherit-parent-fields-workflow.yaml@main
+    with:
+      issue_node_id: ${{ github.event.issue.node_id }}
+    secrets:
+      GH_APP_ID: ${{ secrets.GH_APP_ID }}
+      GH_APP_TOKEN: ${{ secrets.GH_APP_TOKEN }}
+```
+
+#### Entrées de `sub-issue-inherit-parent-fields-workflow`
+
+| Entrée | Type | Défaut | Description |
+|---|---|---|---|
+| `issue_node_id` | string | — | `node_id` GraphQL de l'issue créée (requis). |
+| `project_number` | string | `vars.COFOLIO_PROJECT_NUMBER` | Numéro du Project V2 concerné. |
+| `org` | string | `vars.ORG` | Organisation propriétaire du projet. |
+| `fields` | string | `"Status,Priority,Sprint"` | Champs à hériter (liste séparée par des virgules). |
+| `overwrite` | boolean | `true` | `false` pour ne remplir que les champs encore vides de la sub-issue. |
+| `add_to_project_if_missing` | boolean | `true` | Ajoute la sub-issue au projet si elle n'y est pas encore. |
+
+> ℹ️ Seuls les champs de type liste déroulante (`Status`, `Priority`...) et itération (`Sprint`) sont
+> gérés : tout autre type de champ passé dans `fields` est ignoré avec un avertissement dans les logs.
