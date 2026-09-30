@@ -1,0 +1,71 @@
+name: "Inherit parent project fields"
+description: "Copy Project V2 field values (Status, Priority, Sprint, ...) from the parent issue to one of its sub-issues."
+
+inputs:
+  token:
+    required: true
+    description: "GitHub token (GITHUB_TOKEN or GitHub App installation token) with project write access"
+  issue_node_id:
+    required: true
+    description: "GraphQL node_id of the CHILD issue (the newly created sub-issue)"
+  project_number:
+    required: true
+    description: "Project V2 number (not id) (e.g. 16 for Cofolio project)"
+  org:
+    required: false
+    default: "avenirs-esr"
+    description: "GitHub organization owning the project"
+  fields:
+    required: false
+    default: "Status,Priority,Sprint"
+    description: "Comma-separated list of Project V2 field names to inherit (single-select or iteration fields only)"
+  overwrite:
+    required: false
+    default: "true"
+    description: "'true' to overwrite the sub-issue values, 'false' to only fill the fields that are still empty"
+  add_to_project_if_missing:
+    required: false
+    default: "true"
+    description: "'true' to add the sub-issue to the project when it is not linked to it yet"
+  parent_lookup_attempts:
+    required: false
+    default: "3"
+    description: "Number of attempts to resolve the parent issue (the link is often created just after the issue itself)"
+  parent_lookup_delay_seconds:
+    required: false
+    default: "5"
+    description: "Delay in seconds between two parent lookup attempts"
+
+outputs:
+  inherited:
+    description: "true if at least one field has been inherited from the parent, false otherwise"
+    value: ${{ steps.run.outputs.inherited }}
+  parent_issue_number:
+    description: "Parent issue number, empty if the issue is not a sub-issue"
+    value: ${{ steps.run.outputs.parent_issue_number }}
+  updated_fields:
+    description: "Comma-separated list of the field names actually updated on the sub-issue"
+    value: ${{ steps.run.outputs.updated_fields }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js 22 and install dependencies
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 🧬 Inherit parent project fields
+      id: run
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
+        ORG: ${{ inputs.org }}
+        PROJECT_NUMBER: ${{ inputs.project_number }}
+        FIELD_NAMES: ${{ inputs.fields }}
+        OVERWRITE: ${{ inputs.overwrite }}
+        ADD_TO_PROJECT_IF_MISSING: ${{ inputs.add_to_project_if_missing }}
+        PARENT_LOOKUP_ATTEMPTS: ${{ inputs.parent_lookup_attempts }}
+        PARENT_LOOKUP_DELAY_SECONDS: ${{ inputs.parent_lookup_delay_seconds }}
+      run: node "$GITHUB_ACTION_PATH/inherit-parent-project-fields.js"

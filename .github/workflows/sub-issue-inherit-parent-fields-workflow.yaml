@@ -1,0 +1,84 @@
+name: Sub-issue inherits parent project fields (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      issue_node_id:
+        required: true
+        type: string
+        description: "GraphQL node_id of the created issue (a sub-issue is expected, anything else is ignored)"
+      project_number:
+        required: false
+        type: string
+        default: ""
+        description: "Project V2 number. Defaults to the COFOLIO_PROJECT_NUMBER organization variable."
+      org:
+        required: false
+        type: string
+        default: ""
+        description: "GitHub organization owning the project. Defaults to the ORG organization variable."
+      fields:
+        required: false
+        type: string
+        default: "Status,Priority,Sprint"
+        description: "Comma-separated list of Project V2 field names to inherit from the parent issue"
+      overwrite:
+        required: false
+        type: boolean
+        default: true
+        description: "true to overwrite the sub-issue values, false to only fill the fields that are still empty"
+      add_to_project_if_missing:
+        required: false
+        type: boolean
+        default: true
+        description: "true to add the sub-issue to the project when it is not linked to it yet"
+    secrets:
+      GH_APP_ID:
+        required: true
+      GH_APP_TOKEN:
+        required: true
+    outputs:
+      inherited:
+        description: "true if at least one field has been inherited from the parent issue"
+        value: ${{ jobs.inherit.outputs.inherited }}
+      parent_issue_number:
+        description: "Parent issue number, empty if the created issue is not a sub-issue"
+        value: ${{ jobs.inherit.outputs.parent_issue_number }}
+      updated_fields:
+        description: "Comma-separated list of the field names actually updated on the sub-issue"
+        value: ${{ jobs.inherit.outputs.updated_fields }}
+
+permissions:
+  issues: read
+  contents: read
+  repository-projects: write
+
+jobs:
+  inherit:
+    name: 🧬 Inherit parent project fields
+    runs-on: ubuntu-latest
+    outputs:
+      inherited: ${{ steps.inherit.outputs.inherited }}
+      parent_issue_number: ${{ steps.inherit.outputs.parent_issue_number }}
+      updated_fields: ${{ steps.inherit.outputs.updated_fields }}
+
+    steps:
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ inputs.org != '' && inputs.org || vars.ORG }}
+
+      - name: 🧬 Inherit Status / Priority / Sprint from the parent issue
+        id: inherit
+        uses: avenirs-esr/avenirs-workflows/.github/actions/inherit-parent-project-fields@main
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          issue_node_id: ${{ inputs.issue_node_id }}
+          project_number: ${{ inputs.project_number != '' && inputs.project_number || vars.COFOLIO_PROJECT_NUMBER }}
+          org: ${{ inputs.org != '' && inputs.org || vars.ORG }}
+          fields: ${{ inputs.fields }}
+          overwrite: ${{ inputs.overwrite }}
+          add_to_project_if_missing: ${{ inputs.add_to_project_if_missing }}
