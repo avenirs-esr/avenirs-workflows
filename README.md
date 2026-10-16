@@ -28,11 +28,8 @@ avenirs-workflows/
 ```yaml
 # Exemple d'appel dans un job GitHub Actions
 - name: Setup Node
-  uses: avenirs-esr/avenirs-workflows/.github/actions/install-node@main
-  with:
-    node-version: '22'
+  uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
 ```
-
 ---
 
 ## 🔁 Utilisation d’un workflow réutilisable

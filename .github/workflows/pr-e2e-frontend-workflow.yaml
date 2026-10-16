@@ -71,9 +71,10 @@ jobs:
           fetch-depth: 1
           ref: ${{ github.head_ref }}
 
-      - name: 📦 Install e2e dependencies
-        working-directory: e2e
-        run: npm ci
+      - name: 🔧 Set up Node.js and install e2e dependencies
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+        with:
+          working-directory: e2e
 
       - name: 📥 Download all blob reports
         uses: actions/download-artifact@v4

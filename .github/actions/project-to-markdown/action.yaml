@@ -23,9 +23,9 @@ runs:
   using: "composite"
   steps:
     - name: 🛠️ Setup Node
-      uses: actions/setup-node@v4
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
       with:
-        node-version: 20
+        run-npm-command: "false"
 
     - name: 📜 Generate Markdown table from Project
       shell: bash

@@ -1,5 +1,5 @@
-name: "Setup Node.js 22 with npm cache and Install dependencies"
-description: "Installs Node.js 22 and sets up npm cache, then installs dependencies using npm ci"
+name: "Setup Node.js 24 with npm cache and Install dependencies"
+description: "Installs Node.js 24 and sets up npm cache, then installs dependencies using npm ci"
 
 inputs:
   run-npm-command:
@@ -14,13 +14,13 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Set up Node.js 22 with npm cache
+    - name: Set up Node.js 24 with npm cache
       uses: actions/setup-node@v4
       with:
-        node-version: '22.22.1'
+        node-version: '24'
         registry-url: 'https://registry.npmjs.org'
         cache: ${{ inputs.run-npm-command == 'true' && 'npm' || '' }}
-        cache-dependency-path: ${{ inputs.working-directory }}
+        cache-dependency-path: ${{ inputs.working-directory != '' && format('{0}/package-lock.json', inputs.working-directory) || 'package-lock.json' }}
 
     - name: Update npm
       if: ${{ inputs.run-npm-command == 'true' }}

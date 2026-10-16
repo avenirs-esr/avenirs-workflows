@@ -27,7 +27,7 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: 🔧 Set up Node.js 22 and install dependencies
+    - name: 🔧 Set up Node.js
       if: env.project_type == 'node'
       uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
 

@@ -20,9 +20,9 @@ runs:
   using: "composite"
   steps:
     - name: Setup Node
-      uses: actions/setup-node@v4
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
       with:
-        node-version: 20
+        run-npm-command: "false"
 
     - name: Replace sections
       shell: bash
