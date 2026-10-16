@@ -98,9 +98,10 @@ jobs:
           path: avenirs-cofolio-client
           fetch-depth: 1
 
-      - name: 📦 Install e2e dependencies
-        working-directory: avenirs-cofolio-client/e2e
-        run: npm ci
+      - name: 🔧 Set up Node.js and install e2e dependencies
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+        with:
+          working-directory: avenirs-cofolio-client/e2e
 
       - name: 📥 Download all blob reports
         uses: actions/download-artifact@v4
