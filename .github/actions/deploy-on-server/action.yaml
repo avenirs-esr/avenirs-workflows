@@ -126,8 +126,8 @@ runs:
 
         export NVM_DIR="$HOME/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-        nvm install 24 || { echo "::error::Node.js 24 installation failed"; exit 40; }
-        nvm use 24 || { echo "::error::Node.js 24 activation failed"; exit 41; }
+        nvm install 26 || { echo "::error::Node.js 26 installation failed"; exit 40; }
+        nvm use 26 || { echo "::error::Node.js 26 activation failed"; exit 41; }
 
         cd "$SRV_BASE_PATH" || { echo "::error::Base path not found"; exit 10; }
         "$SRV_UPDATE_DEPLOYMENT_CMD" || { echo "::error::Update deployment command failed"; exit 20; }
