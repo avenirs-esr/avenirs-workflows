@@ -22,12 +22,6 @@ runs:
         cache: ${{ inputs.run-npm-command == 'true' && 'npm' || '' }}
         cache-dependency-path: ${{ inputs.working-directory != '' && format('{0}/package-lock.json', inputs.working-directory) || 'package-lock.json' }}
 
-    - name: Update npm
-      if: ${{ inputs.run-npm-command == 'true' }}
-      working-directory: ${{ inputs.working-directory }}
-      shell: bash
-      run: npm install -g npm@11.18.0
-
     - name: Install dependencies with npm ci
       if: ${{ inputs.run-npm-command == 'true' }}
       working-directory: ${{ inputs.working-directory }}
