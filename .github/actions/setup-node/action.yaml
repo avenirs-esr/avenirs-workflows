@@ -1,29 +1,63 @@
 name: "Setup Node.js 26 with npm cache and Install dependencies"
-description: "Installs Node.js 26 and sets up npm cache, then installs dependencies using npm ci"
+description: "Installs Node.js 26 and caches and installs dependencies using pnpm by default or npm when selected"
 
 inputs:
   run-npm-command:
     required: false
-    description: "Whether to run npm ci to install dependencies. Set to 'true' to run, 'false' to skip."
+    description: "Whether to set up dependency caching and install dependencies with the selected package manager. Set to 'false' for Node.js only."
     default: "true"
   working-directory:
     required: false
-    description: "Working directory for npm commands (relative to the repository root). If not set, commands will run in the default working directory."
-    default: ""
+    description: "Dependency installation directory relative to the repository root. Use the workspace root for pnpm."
+    default: "."
+  package-manager:
+    required: false
+    description: "Package manager used to install dependencies: npm or pnpm"
+    default: "pnpm"
 
 runs:
   using: "composite"
   steps:
+    - name: 🔎 Resolve dependency installation paths
+      id: paths
+      shell: bash
+      env:
+        PACKAGE_MANAGER: ${{ inputs.package-manager }}
+        INSTALL_DIRECTORY: ${{ inputs.working-directory }}
+      run: |
+        case "$PACKAGE_MANAGER" in
+          npm) lockfile=package-lock.json ;;
+          pnpm) lockfile=pnpm-lock.yaml ;;
+          *) echo "::error::Unsupported package manager: $PACKAGE_MANAGER"; exit 1 ;;
+        esac
+        directory="${INSTALL_DIRECTORY:-.}"
+        printf 'directory=%s\n' "$directory" >> "$GITHUB_OUTPUT"
+        printf 'lockfile=%s/%s\n' "$directory" "$lockfile" >> "$GITHUB_OUTPUT"
+
+    - name: 📦 Install pnpm
+      if: ${{ inputs.run-npm-command == 'true' && inputs.package-manager == 'pnpm' }}
+      uses: pnpm/action-setup@v4
+      with:
+        package_json_file: ${{ steps.paths.outputs.directory }}/package.json
+        run_install: false
+        cache: false
+
     - name: Set up Node.js 26 with npm cache
       uses: actions/setup-node@v4
       with:
         node-version: '26'
         registry-url: 'https://registry.npmjs.org'
-        cache: ${{ inputs.run-npm-command == 'true' && 'npm' || '' }}
-        cache-dependency-path: ${{ inputs.working-directory != '' && format('{0}/package-lock.json', inputs.working-directory) || 'package-lock.json' }}
+        cache: ${{ inputs.run-npm-command == 'true' && inputs.package-manager || '' }}
+        cache-dependency-path: ${{ steps.paths.outputs.lockfile }}
 
     - name: Install dependencies with npm ci
-      if: ${{ inputs.run-npm-command == 'true' }}
-      working-directory: ${{ inputs.working-directory }}
+      if: ${{ inputs.run-npm-command == 'true' && inputs.package-manager == 'npm' }}
+      working-directory: ${{ steps.paths.outputs.directory }}
       shell: bash
       run: npm ci --include=optional
+
+    - name: 📦 Install workspace dependencies
+      if: ${{ inputs.run-npm-command == 'true' && inputs.package-manager == 'pnpm' }}
+      working-directory: ${{ steps.paths.outputs.directory }}
+      shell: bash
+      run: pnpm install --frozen-lockfile
