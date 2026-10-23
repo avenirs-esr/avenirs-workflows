@@ -3,10 +3,22 @@ name: Accessibility Check and Deploy
 on:
   workflow_call:
     inputs:
-      build-command:
-        description: "The npm build command to run"
+      package-manager:
+        type: string
         required: false
-        default: "npm run build-only:development"
+        default: pnpm
+      working-directory:
+        type: string
+        required: false
+        default: .
+      playwright-image:
+        type: string
+        required: false
+        default: mcr.microsoft.com/playwright:v1.56.1-noble
+      build-command:
+        description: "Custom build command, otherwise build-only:development is run with the selected package manager"
+        required: false
+        default: ""
         type: string
       continue-on-error:
         description: "Whether to continue the workflow if the accessibility tests fail"
@@ -18,33 +30,38 @@ jobs:
   a11y-test-and-deploy-reports:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.56.0-noble
+      image: ${{ inputs.playwright-image }}
       options: --user 1001
     steps:
       - name: ⬇️ Checkout code
         uses: actions/checkout@v4
 
       - name: 🔧 Set up Node.js with npm cache
-        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@build/us-3043-pnpm-monorepo
+        with:
+          package-manager: ${{ inputs.package-manager }}
 
       - name: 🏗️ Build
-        run: ${{ inputs.build-command }}
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.build-command || format('{0} run build-only:development', inputs.package-manager) }}
         env:
           VITE_ENABLE_MSW: true
 
       - name: 👮‍♂️ Run accessibility test
         id: a11y-test
-        run: |
-          npm run test:a11y
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.package-manager }} run test:a11y
         continue-on-error: ${{ inputs.continue-on-error }}
         env:
           VITE_ENABLE_MSW: true
 
       - name: ↔️ Move accessibility report to temp folder
         if: steps.a11y-test.outcome == 'failure'
+        env:
+          A11Y_REPORTS_DIR: ${{ inputs.working-directory }}/a11y/reports
         run: |
           mkdir -p gh-pages-tmp
-          mv a11y/reports/* gh-pages-tmp/
+          mv "$A11Y_REPORTS_DIR"/* gh-pages-tmp/
 
       - name: 🚀 Deploy accessibility report
         if: steps.a11y-test.outcome == 'failure'
