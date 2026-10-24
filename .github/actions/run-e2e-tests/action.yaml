@@ -90,7 +90,7 @@ runs:
 
     - name: 🔧 Set up Node.js and install dependencies
       if: ${{ inputs.need_to_checkout == 'true' }}
-      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@build/us-3043-pnpm-monorepo
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
       with:
         package-manager: ${{ inputs.package-manager }}
         working-directory: ${{ steps.paths.outputs.root-directory }}

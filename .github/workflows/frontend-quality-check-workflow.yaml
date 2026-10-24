@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔧 Setup Node + install
-        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@build/us-3043-pnpm-monorepo
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
         with:
           package-manager: ${{ inputs.package-manager }}
 
@@ -59,7 +59,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔧 Setup Node + install
-        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@build/us-3043-pnpm-monorepo
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
         with:
           package-manager: ${{ inputs.package-manager }}
 
@@ -97,7 +97,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🔧 Setup Node + install
-        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@build/us-3043-pnpm-monorepo
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
         with:
           package-manager: ${{ inputs.package-manager }}
 

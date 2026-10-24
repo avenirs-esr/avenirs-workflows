@@ -33,7 +33,7 @@ jobs:
           echo "✅ Tag $TAG_REF is on develop"
 
       - name: 🔧 Setup Node + install
-        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@build/us-3043-pnpm-monorepo
+        uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
         with:
           package-manager: npm
 
