@@ -2,6 +2,14 @@ name: Run E2E Tests
 description: Run Playwright E2E tests for frontend projects
 
 inputs:
+  package-manager:
+    description: Package manager used to run application and E2E commands
+    required: false
+    default: 'pnpm'
+  working-directory:
+    description: Application directory relative to the checkout root
+    required: false
+    default: '.'
   base_url:
     description: Base URL for e2e tests
     required: false
@@ -64,29 +72,46 @@ runs:
         path: avenirs-cofolio-client
         fetch-depth: 1
 
+    - name: 📁 Resolve application and E2E paths
+      id: paths
+      shell: bash
+      env:
+        NEED_TO_CHECKOUT: ${{ inputs.need_to_checkout }}
+        APP_DIRECTORY: ${{ inputs.working-directory }}
+      run: |
+        root_directory=.
+        if [ "$NEED_TO_CHECKOUT" = true ]; then
+          root_directory=avenirs-cofolio-client
+        fi
+        app_directory="$root_directory/$APP_DIRECTORY"
+        printf 'root-directory=%s\n' "$root_directory" >> "$GITHUB_OUTPUT"
+        printf 'app-directory=%s\n' "$app_directory" >> "$GITHUB_OUTPUT"
+        printf 'e2e-directory=%s/e2e\n' "$app_directory" >> "$GITHUB_OUTPUT"
+
     - name: 🔧 Set up Node.js and install dependencies
       if: ${{ inputs.need_to_checkout == 'true' }}
       uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
       with:
-        working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client' || '' }}
+        package-manager: ${{ inputs.package-manager }}
+        working-directory: ${{ steps.paths.outputs.root-directory }}
 
     - name: 🏗️ Build project (skip type-check for e2e)
       if: ${{ inputs.run_local_preview == 'true' }}
-      working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client' || '' }}
+      working-directory: ${{ steps.paths.outputs.app-directory }}
       shell: bash
-      run: npm run build-only:development
+      run: ${{ inputs.package-manager }} run build-only:development
       env:
         VITE_ENABLE_MSW: ${{ inputs.enable_msw }}
 
     - name: 🚀 Start preview server
       if: ${{ inputs.run_local_preview == 'true' }}
-      working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client' || '' }}
+      working-directory: ${{ steps.paths.outputs.app-directory }}
       shell: bash
-      run: npm run preview:development &
+      run: ${{ inputs.package-manager }} run preview:development &
 
     - name: ⏳ Wait for preview server
       if: ${{ inputs.run_local_preview == 'true' }}
-      working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client' || '' }}
+      working-directory: ${{ steps.paths.outputs.app-directory }}
       shell: bash
       run: |
         echo "Waiting for preview server to be ready..."
@@ -94,15 +119,18 @@ runs:
         echo "Preview server is ready!"
 
     - name: 📦 Install e2e dependencies
+      if: ${{ inputs.package-manager == 'npm' }}
       shell: bash
-      working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e
+      working-directory: ${{ steps.paths.outputs.e2e-directory }}
       run: npm ci
 
     - name: 🔍 Get Playwright version
       id: playwright-version
       shell: bash
-      working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e
-      run: echo "version=$(npx playwright --version | awk '{print $2}')" >> $GITHUB_OUTPUT
+      working-directory: ${{ steps.paths.outputs.e2e-directory }}
+      run: |
+        version=$(${{ inputs.package-manager == 'pnpm' && 'pnpm exec' || 'npx' }} playwright --version | awk '{print $2}')
+        printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
 
     - name: 🗄️ Cache Playwright browsers
       id: playwright-cache
@@ -114,26 +142,38 @@ runs:
     - name: 🎭 Install Playwright browsers
       if: steps.playwright-cache.outputs.cache-hit != 'true'
       shell: bash
-      working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e
-      run: npm run e2e:install
+      working-directory: ${{ steps.paths.outputs.e2e-directory }}
+      run: ${{ inputs.package-manager }} run e2e:install
 
     - name: 🎭 Install Playwright system dependencies
       if: steps.playwright-cache.outputs.cache-hit == 'true'
       shell: bash
-      working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e
-      run: npx playwright install-deps
+      working-directory: ${{ steps.paths.outputs.e2e-directory }}
+      run: ${{ inputs.package-manager == 'pnpm' && 'pnpm exec' || 'npx' }} playwright install-deps
 
     - name: 🧪 Run e2e tests
       id: e2e_tests
       shell: bash
-      working-directory: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e
+      working-directory: ${{ steps.paths.outputs.e2e-directory }}
       run: |
-        CMD="${{ inputs.chrome_only == 'true' && 'npm run e2e:chrome' || 'npm run e2e' }}"
-        if [ -n "${{ inputs.shard }}" ]; then
-          CMD="$CMD -- --reporter=blob --shard=${{ inputs.shard }}/${{ inputs.total_shards }}"
+        script=e2e
+        if [ "$CHROME_ONLY" = true ]; then
+          script=e2e:chrome
         fi
-        eval $CMD
+        args=()
+        if [ -n "$SHARD" ]; then
+          args+=(--reporter=blob "--shard=$SHARD/$TOTAL_SHARDS")
+        fi
+        if [ "$PACKAGE_MANAGER" = pnpm ]; then
+          pnpm run "$script" "${args[@]}"
+        else
+          npm run "$script" -- "${args[@]}"
+        fi
       env:
+        PACKAGE_MANAGER: ${{ inputs.package-manager }}
+        CHROME_ONLY: ${{ inputs.chrome_only }}
+        SHARD: ${{ inputs.shard }}
+        TOTAL_SHARDS: ${{ inputs.total_shards }}
         CI: 'true'
         VITE_API_URL: ${{ inputs.base_url }}
         USERNAME: ${{ inputs.username }}
@@ -147,7 +187,7 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: blob-report-${{ inputs.shard }}
-        path: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e/blob-report
+        path: ${{ steps.paths.outputs.e2e-directory }}/blob-report
         if-no-files-found: ignore
         retention-days: 5
 
@@ -156,6 +196,6 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: playwright-report
-        path: ${{ inputs.need_to_checkout == 'true' && 'avenirs-cofolio-client/' || '' }}e2e/playwright-report
+        path: ${{ steps.paths.outputs.e2e-directory }}/playwright-report
         if-no-files-found: ignore
         retention-days: 5
