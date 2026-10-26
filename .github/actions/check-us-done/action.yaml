@@ -30,6 +30,8 @@ runs:
     - name: 🔧 Set up Node.js
       if: env.project_type == 'node'
       uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
 
     - name: 🔍 Check parent and sub-issues status
       id: check

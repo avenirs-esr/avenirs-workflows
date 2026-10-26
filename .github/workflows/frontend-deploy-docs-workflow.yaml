@@ -11,6 +11,8 @@ jobs:
 
       - name: 🔧 Set up Node.js with npm cache
         uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+        with:
+          package-manager: npm
 
       - name: 🏗️ Build VitePress docs
         run: npm run docs:build

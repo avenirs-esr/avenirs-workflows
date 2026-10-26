@@ -2,6 +2,15 @@ name: PR Code Quality Checks
 
 on:
   workflow_call:
+    inputs:
+      package-manager:
+        type: string
+        required: false
+        default: pnpm
+      working-directory:
+        type: string
+        required: false
+        default: .
 
 jobs:
   quality-checks:
@@ -13,11 +22,11 @@ jobs:
         include:
           - task: typecheck
             name: 🧠 TypeScript type checking
-            cmd: "npm run type-check"
+            cmd: "type-check"
             envJson: "{}"
           - task: lint
             name: 🧹 Run ESLint
-            cmd: "npm run lint"
+            cmd: "lint"
             envJson: "{}"
 
     steps:
@@ -26,12 +35,16 @@ jobs:
 
       - name: 🔧 Setup Node + install
         uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+        with:
+          package-manager: ${{ inputs.package-manager }}
 
       - name: 🏗️ Build project
-        run: npm run build-only
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.package-manager }} run build-only
 
       - name: ${{ matrix.name }}
-        run: ${{ matrix.cmd }}
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.package-manager }} run ${{ matrix.cmd }}
         env: ${{ fromJSON(matrix.envJson) }}
 
   unit-tests:
@@ -47,21 +60,33 @@ jobs:
 
       - name: 🔧 Setup Node + install
         uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+        with:
+          package-manager: ${{ inputs.package-manager }}
 
       - name: 🏗️ Build project
-        run: npm run build-only
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.package-manager }} run build-only
 
       - name: 🧪 Run unit tests (shard ${{ matrix.shard }}/4)
-        run: npm run test:coverage:shard -- --shard=${{ matrix.shard }}/4 --outputFile=.vitest-reports/shard-${{ matrix.shard }}.blob
+        working-directory: ${{ inputs.working-directory }}
         env:
+          PACKAGE_MANAGER: ${{ inputs.package-manager }}
+          SHARD: ${{ matrix.shard }}
           VITE_ENABLE_MSW: "true"
-
+        run: |
+          if [ "$PACKAGE_MANAGER" = pnpm ]; then
+            pnpm run test:coverage:shard --shard="$SHARD/4" --outputFile=".vitest-reports/shard-$SHARD.blob"
+          else
+            npm run test:coverage:shard -- --shard="$SHARD/4" --outputFile=".vitest-reports/shard-$SHARD.blob"
+          fi
 
       - name: 📤 Upload blob report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-shard-${{ matrix.shard }}
-          path: .vitest-reports/shard-${{ matrix.shard }}.blob
+          path: ${{ inputs.working-directory }}/.vitest-reports/shard-${{ matrix.shard }}.blob
+          include-hidden-files: true
+          if-no-files-found: error
 
   merge-coverage:
     needs: unit-tests
@@ -73,16 +98,19 @@ jobs:
 
       - name: 🔧 Setup Node + install
         uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+        with:
+          package-manager: ${{ inputs.package-manager }}
 
       - name: 📥 Download all blob reports
         uses: actions/download-artifact@v4
         with:
-          path: ./blob-reports
+          path: ${{ inputs.working-directory }}/blob-reports
           pattern: coverage-shard-*
           merge-multiple: true
 
       - name: 🔀 Merge reports & check coverage thresholds
-        run: npx vitest --mergeReports=./blob-reports --coverage.enabled=true --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=html
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.package-manager == 'pnpm' && 'pnpm exec' || 'npx' }} vitest --mergeReports=./blob-reports --coverage.enabled=true --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=html
         env:
           VITE_ENABLE_MSW: "true"
 
