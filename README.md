@@ -67,6 +67,22 @@ jobs:
 
 ---
 
+## CI frontend pour plusieurs applications
+
+Les workflows frontend acceptent des espaces de noms optionnels pour exécuter plusieurs applications dans la même pull request :
+
+| Workflow | Entrée | Défaut | Usage |
+|---|---|---|---|
+| `frontend-quality-check-workflow.yaml` | `artifact-prefix` | `""` | Préfixe des artefacts de couverture, utilisé pour l'upload et le téléchargement. |
+| `a11y-test-and-deploy-reports-workflow.yaml` | `report-prefix` | `""` | Sous-dossier de publication et des liens du commentaire, sous `accessibility-reports/<PR>/`. |
+| `a11y-test-and-deploy-reports-workflow.yaml` | `flat-report` | `false` | Active les rapports HTML à plat, sans arborescence `student`/`staff`. Le comportement DSAV existant est conservé. |
+
+Dans un monorepo, chaque application doit fournir un `artifact-prefix` et un `report-prefix` distincts et non vides, par exemple `cofolio-` / `cofolio` et `backoffice-` / `backoffice`. `report-prefix` accepte les lettres, chiffres, tirets et underscores. Sans ces entrées, les noms d'artefacts et les destinations historiques restent inchangés.
+
+`working-directory` sélectionne l'application pour les commandes et rapports ; l'installation PNPM reste à la racine du workspace. Les jobs a11y d'un même run doivent être séquencés pour éviter les publications concurrentes sur `gh-pages`, sans empêcher le second audit de s'exécuter si le premier échoue. Le caller fournit une `playwright-image` correspondant à sa version de Playwright.
+
+Les changements des workflows et de l'action `generate-comment` doivent être publiés ensemble avant de mettre à jour leurs callers sur `@main`.
+
 ## 📦 Actions disponibles
 
 | Nom                            | Description                                                                             |

@@ -1,6 +1,10 @@
 name: "Generate Comment"
 description: "Generate a comment based on a template file and inputs"
 inputs:
+  report-prefix:
+    description: "Application subdirectory used when publishing accessibility reports"
+    required: false
+    default: ""
   dsav-template:
     description: "Boolean to indicate if the DSAV template should be used"
     required: true
@@ -16,13 +20,15 @@ runs:
       if: ${{ inputs.dsav-template == 'true' }}
       id: generate-dsav
       shell: bash
+      env:
+        REPORT_PREFIX: ${{ inputs.report-prefix }}
       run: |
         REPO_FULL=${{ github.repository }}
         REPO_OWNER=${REPO_FULL%%/*}
         REPO_NAME=${REPO_FULL#*/}
         PR_NUMBER=${{ github.event.pull_request.number }}
-        BASE_URL="https://${REPO_OWNER}.github.io/${REPO_NAME}/accessibility-reports/${PR_NUMBER}"
-        COMMENT_BODY="### ♿ Accessibility Report"
+        BASE_URL="https://${REPO_OWNER}.github.io/${REPO_NAME}/accessibility-reports/${PR_NUMBER}${REPORT_PREFIX:+/$REPORT_PREFIX}"
+        COMMENT_BODY="### ♿ Accessibility Report${REPORT_PREFIX:+ — $REPORT_PREFIX}"
         if [ -d "gh-pages-tmp/" ]; then
           while IFS= read -r FILE; do
             FILE=$(basename "$FILE")
@@ -39,13 +45,15 @@ runs:
       if: ${{ inputs.dsav-template != 'true' }}
       id: generate-std
       shell: bash
+      env:
+        REPORT_PREFIX: ${{ inputs.report-prefix }}
       run: |
         REPO_FULL=${{ github.repository }}
         REPO_OWNER=${REPO_FULL%%/*}
         REPO_NAME=${REPO_FULL#*/}
         PR_NUMBER=${{ github.event.pull_request.number }}
-        BASE_URL="https://${REPO_OWNER}.github.io/${REPO_NAME}/accessibility-reports/${PR_NUMBER}"
-        COMMENT_BODY="### ♿ Accessibility Report"
+        BASE_URL="https://${REPO_OWNER}.github.io/${REPO_NAME}/accessibility-reports/${PR_NUMBER}${REPORT_PREFIX:+/$REPORT_PREFIX}"
+        COMMENT_BODY="### ♿ Accessibility Report${REPORT_PREFIX:+ — $REPORT_PREFIX}"
         for DIR in student staff; do
           if [ -d "gh-pages-tmp/$DIR" ]; then
             if [ "$DIR" = "student" ]; then

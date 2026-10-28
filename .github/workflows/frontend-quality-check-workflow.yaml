@@ -3,6 +3,11 @@ name: PR Code Quality Checks
 on:
   workflow_call:
     inputs:
+      artifact-prefix:
+        description: "Prefix isolating this application's coverage artifacts"
+        type: string
+        required: false
+        default: ""
       package-manager:
         type: string
         required: false
@@ -83,7 +88,7 @@ jobs:
       - name: 📤 Upload blob report
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-shard-${{ matrix.shard }}
+          name: ${{ inputs.artifact-prefix }}coverage-shard-${{ matrix.shard }}
           path: ${{ inputs.working-directory }}/.vitest-reports/shard-${{ matrix.shard }}.blob
           include-hidden-files: true
           if-no-files-found: error
@@ -105,7 +110,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ${{ inputs.working-directory }}/blob-reports
-          pattern: coverage-shard-*
+          pattern: ${{ inputs.artifact-prefix }}coverage-shard-*
           merge-multiple: true
 
       - name: 🔀 Merge reports & check coverage thresholds
