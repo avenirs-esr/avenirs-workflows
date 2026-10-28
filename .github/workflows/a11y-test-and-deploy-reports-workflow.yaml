@@ -3,6 +3,16 @@ name: Accessibility Check and Deploy
 on:
   workflow_call:
     inputs:
+      report-prefix:
+        description: "Application subdirectory for accessibility reports"
+        type: string
+        required: false
+        default: ""
+      flat-report:
+        description: "Use the flat HTML report layout instead of student/staff directories"
+        type: boolean
+        required: false
+        default: false
       package-manager:
         type: string
         required: false
@@ -63,13 +73,31 @@ jobs:
           mkdir -p gh-pages-tmp
           mv "$A11Y_REPORTS_DIR"/* gh-pages-tmp/
 
+      - name: 🔎 Resolve accessibility report destination
+        id: report-path
+        if: steps.a11y-test.outcome == 'failure'
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPORT_PREFIX: ${{ inputs.report-prefix }}
+        run: |
+          if [[ -n "$REPORT_PREFIX" && ! "$REPORT_PREFIX" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            echo "::error::report-prefix must contain only letters, digits, underscores or hyphens"
+            exit 1
+          fi
+          destination="accessibility-reports/$PR_NUMBER"
+          if [ -n "$REPORT_PREFIX" ]; then
+            destination="$destination/$REPORT_PREFIX"
+          fi
+          printf 'destination=%s\n' "$destination" >> "$GITHUB_OUTPUT"
+
       - name: 🚀 Deploy accessibility report
         if: steps.a11y-test.outcome == 'failure'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: gh-pages-tmp
-          destination_dir: accessibility-reports/${{ github.event.pull_request.number }}
+          destination_dir: ${{ steps.report-path.outputs.destination }}
           allow_empty_commit: true
           user_name: github-actions
           user_email: github-actions@github.com
@@ -79,7 +107,8 @@ jobs:
         id: generate-comment
         uses: avenirs-esr/avenirs-workflows/.github/actions/generate-comment@main
         with:
-          dsav-template: ${{ contains(github.repository, 'dsav') }}
+          dsav-template: ${{ inputs.flat-report || contains(github.repository, 'dsav') }}
+          report-prefix: ${{ inputs.report-prefix }}
 
       - name: 💬 Comment on PR with dynamic report URLs
         if: steps.a11y-test.outcome == 'failure'
