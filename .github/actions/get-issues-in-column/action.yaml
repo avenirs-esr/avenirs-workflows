@@ -20,6 +20,10 @@ inputs:
     required: false
     default: "User Story"
     description: "Comma-separated list of issue types to look for in the column (e.g. \"User Story,Enabler Story\"). Defaults to \"User Story\" only."
+  issue_state:
+    required: false
+    default: ""
+    description: "Optional issue state filter (OPEN or CLOSED). Empty means no filter."
   sprint:
     required: false
     default: ""
@@ -54,4 +58,5 @@ runs:
         TARGET_STATUS_NAME: ${{ inputs.target_status_name }}
         ISSUE_TYPE: ${{ inputs.issue_type }}
         SPRINT: ${{ inputs.sprint }}
+        ISSUE_STATE: ${{ inputs.issue_state }}
       run: node "$GITHUB_ACTION_PATH/get-issues-in-column.js"

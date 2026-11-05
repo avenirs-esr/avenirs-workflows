@@ -272,6 +272,7 @@ jobs:
           project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
           target_status_name: ${{ vars.IN_RECETTE_STATUS_NAME }}
           issue_type: ${{ vars.US_ISSUE_TYPE }}
+          issue_state: OPEN
           org: ${{ vars.ORG }}
 
       - name: 🚀 Notify Rocket.Chat
