@@ -33,6 +33,7 @@ const {
   const targetStatusName = (process.env.TARGET_STATUS_NAME || "In Review").trim();
   // ISSUE_TYPE accepts a comma-separated list (e.g. "User Story,Enabler Story").
   const wantedIssueTypes = normList(process.env.ISSUE_TYPE || "User Story", { stripEmoji: true });
+  const wantedIssueState = (process.env.ISSUE_STATE || "").trim().toUpperCase();
   const sprintInput = (process.env.SPRINT || "").trim();
 
   const query = `
@@ -199,6 +200,10 @@ const {
 
       const issueTypeName = issue.issueType?.name ?? "";
       if (!wantedIssueTypes.includes(norm(issueTypeName, { stripEmoji: true }))) {
+        continue;
+      }
+
+      if (wantedIssueState && (issue.state ?? "").toUpperCase() !== wantedIssueState) {
         continue;
       }
 
