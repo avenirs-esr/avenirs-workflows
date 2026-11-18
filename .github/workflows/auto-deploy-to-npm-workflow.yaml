@@ -34,14 +34,12 @@ jobs:
 
       - name: 🔧 Setup Node + install
         uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
-        with:
-          package-manager: npm
 
       - name: 🏗️ Build + typecheck + typegen
-        run: npm run build
+        run: pnpm run build
 
       - name: 🧹 Lint
-        run: npm run lint
+        run: pnpm run lint
 
       - name: 🚀 Publish to npm
         run: npm publish --provenance --access public

@@ -22,8 +22,6 @@ jobs:
 
       - name: 🔧 Setup Node + install
         uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
-        with:
-          package-manager: npm
 
       - name: 🧮 Resolve npm versions
         id: npm-versions
@@ -49,7 +47,7 @@ jobs:
           git config --global user.email "avenirs-dsav-bot[bot]@users.noreply.github.com"
 
       - name: 🚀 Run release
-        run: npm run release:${{ github.event.inputs.bump }}
+        run: pnpm run release:${{ github.event.inputs.bump }}
 
       - name: ⬆️ Push tags and commits
         env:
