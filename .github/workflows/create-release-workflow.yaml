@@ -1,0 +1,87 @@
+name: Create release on all repositories
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Tag to create on every repository (e.g. 0.14.0-rc)"
+        required: true
+        type: string
+      title:
+        description: "Release title (e.g. 0.14.0-rc (Sprint 16))"
+        required: true
+        type: string
+      include_sprint_us:
+        description: "Add the US list of a sprint to the release of the calling repository only"
+        required: false
+        type: boolean
+        default: false
+      sprint:
+        description: "Sprint title (e.g. Sprint 15); required when include_sprint_us is true, ignored otherwise"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Tag + release on every configured repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: ✅ Check sprint
+        if: ${{ inputs.include_sprint_us && inputs.sprint == '' }}
+        run: |
+          echo "::error::include_sprint_us is enabled: the sprint input is required (e.g. Sprint 15)."
+          exit 1
+
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 🔍 Get sprint US
+        id: us
+        if: ${{ inputs.include_sprint_us }}
+        uses: avenirs-esr/avenirs-workflows/.github/actions/get-issues-in-column@main
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
+          target_status_name: In Review,Recette,Done
+          issue_type: ${{ vars.US_ISSUE_TYPE }}
+          org: ${{ vars.ORG }}
+          sprint: ${{ inputs.sprint }}
+
+      - name: 📝 Build release description
+        id: body
+        if: ${{ inputs.include_sprint_us }}
+        env:
+          SPRINT: ${{ inputs.sprint }}
+          ISSUES_JSON: ${{ steps.us.outputs.issues_json }}
+        run: |
+          if [ "${{ steps.us.outputs.should_run }}" != "true" ]; then
+            echo "::error::No US found for sprint $SPRINT, nothing created."
+            exit 1
+          fi
+          {
+            echo "markdown<<EOF"
+            echo "List of US selected for ${SPRINT,,} :"
+            echo
+            jq -r '.[] | "- [US#\(.number)](\(.url))"' <<< "$ISSUES_JSON"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: 🏷️ Create tags and releases
+        uses: avenirs-esr/avenirs-workflows/.github/actions/create-release-on-repositories@main
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          org: ${{ vars.ORG }}
+          repositories: ${{ vars.RELEASE_REPOSITORIES }}
+          tag: ${{ inputs.tag }}
+          title: ${{ inputs.title }}
+          primary_repository: ${{ github.repository }}
+          primary_body: ${{ steps.body.outputs.markdown }}

@@ -1,0 +1,46 @@
+name: "Create release on repositories"
+description: "Creates a tag on the HEAD of develop and a published release on every given repository. Existing tags are never moved."
+
+inputs:
+  token:
+    required: true
+    description: "GitHub App token or PAT with Contents: write on every repository"
+  org:
+    required: true
+    description: "GitHub organization name (for repositories given without owner)"
+  repositories:
+    required: true
+    description: "Comma or newline separated list, or JSON array, of repositories (name or owner/name)"
+  tag:
+    required: true
+    description: "Tag to create"
+  title:
+    required: true
+    description: "Release title"
+  primary_repository:
+    required: true
+    description: "Repository (owner/name) always processed and the only one receiving primary_body"
+  primary_body:
+    required: false
+    default: ""
+    description: "Release description of the primary repository"
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 🏷️ Create tags and releases
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ORG: ${{ inputs.org }}
+        REPOSITORIES: ${{ inputs.repositories }}
+        TAG: ${{ inputs.tag }}
+        TITLE: ${{ inputs.title }}
+        PRIMARY_REPOSITORY: ${{ inputs.primary_repository }}
+        PRIMARY_BODY: ${{ inputs.primary_body }}
+      run: node "$GITHUB_ACTION_PATH/create-release-on-repositories.js"

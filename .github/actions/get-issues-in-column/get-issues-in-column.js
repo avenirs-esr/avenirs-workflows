@@ -30,7 +30,12 @@ const {
   const statusFieldName = "Status";
   const sprintFieldName = "Sprint";
 
-  const targetStatusName = (process.env.TARGET_STATUS_NAME || "In Review").trim();
+  // TARGET_STATUS_NAME accepts a comma-separated list (e.g. "In Review,Recette,Done").
+  const targetStatusNames = (process.env.TARGET_STATUS_NAME || "In Review")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  const wantedStatuses = normList(process.env.TARGET_STATUS_NAME || "In Review", { stripEmoji: true });
   // ISSUE_TYPE accepts a comma-separated list (e.g. "User Story,Enabler Story").
   const wantedIssueTypes = normList(process.env.ISSUE_TYPE || "User Story", { stripEmoji: true });
   const wantedIssueState = (process.env.ISSUE_STATE || "").trim().toUpperCase();
@@ -163,15 +168,43 @@ const {
         throw new Error(`Single-select field "${statusFieldName}" not found in Project V2 #${projectNumber}.`);
       }
 
-      const targetOption = findSingleSelectOption(statusField, targetStatusName, {
-        stripEmoji: true,
-      });
+      for (const targetStatusName of targetStatusNames) {
+        const targetOption = findSingleSelectOption(statusField, targetStatusName, {
+          stripEmoji: true,
+        });
 
-      if (!targetOption?.id) {
-        throw new Error(`Option "${targetStatusName}" not found in field "${statusFieldName}".`);
+        if (!targetOption?.id) {
+          throw new Error(`Option "${targetStatusName}" not found in field "${statusFieldName}".`);
+        }
       }
 
       statusFieldId = statusField.id;
+
+      if (sprintInput && !isCurrentSprintToken(sprintInput)) {
+        const sprintField = findProjectIterationField(fields, sprintFieldName, {
+          stripEmoji: true,
+        });
+
+        if (!sprintField) {
+          throw new Error(`Iteration field "${sprintFieldName}" not found in Project V2 #${projectNumber}.`);
+        }
+
+        const iterations = [
+          ...sprintField.configuration.iterations,
+          ...sprintField.configuration.completedIterations,
+        ];
+        const sprintMatches = iterations.filter(
+          (iteration) => norm(iteration.title, { stripEmoji: true }) === norm(sprintInput, { stripEmoji: true })
+        );
+
+        if (sprintMatches.length !== 1) {
+          throw new Error(
+            sprintMatches.length === 0
+              ? `Sprint "${sprintInput}" not found. Available sprints: ${iterations.map((iteration) => iteration.title).join(", ")}.`
+              : `Sprint "${sprintInput}" is ambiguous: ${sprintMatches.length} iterations share this title.`
+          );
+        }
+      }
     }
 
     if (sprintInput && isCurrentSprintToken(sprintInput) && !resolvedSprint) {
@@ -212,7 +245,7 @@ const {
       const statusValue = findSingleSelectFieldValue(fieldValues, statusFieldId);
       const currentStatus = statusValue?.name ?? "";
 
-      if (norm(currentStatus, { stripEmoji: true }) !== norm(targetStatusName, { stripEmoji: true })) {
+      if (!wantedStatuses.includes(norm(currentStatus, { stripEmoji: true }))) {
         continue;
       }
 
@@ -251,7 +284,7 @@ const {
   });
 
   console.log(
-    `✅ Found ${matchingIssues.length} "${wantedIssueTypes.join(", ")}" issue(s) in "${targetStatusName}"` +
+    `✅ Found ${matchingIssues.length} "${wantedIssueTypes.join(", ")}" issue(s) in "${targetStatusNames.join(", ")}"` +
     `${resolvedSprint ? ` and sprint "${resolvedSprint}"` : ""} (Project #${projectNumber}).`
   );
 })().catch((error) => {
