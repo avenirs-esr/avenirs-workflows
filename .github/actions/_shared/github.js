@@ -61,6 +61,29 @@ async function restPost(token, url, body, options = {}) {
   return json;
 }
 
+async function restGet(token, url, options = {}) {
+  const { userAgent = "github-script" } = options;
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "User-Agent": userAgent,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+  });
+
+  if (res.status === 404) return null;
+
+  const json = await res.json();
+
+  if (!res.ok) {
+    throw new Error(`REST GET error: HTTP ${res.status} ${JSON.stringify(json)}`);
+  }
+
+  return json;
+}
+
 function findProjectSingleSelectField(fields, fieldName, options = {}) {
   const fieldNameNorm = norm(fieldName, options);
 
@@ -89,6 +112,7 @@ function findSingleSelectFieldValue(fieldValues, fieldId) {
 
 module.exports = {
   gql,
+  restGet,
   restPost,
   findProjectSingleSelectField,
   findSingleSelectOption,
