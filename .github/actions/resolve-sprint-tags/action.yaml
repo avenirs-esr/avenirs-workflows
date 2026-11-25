@@ -1,0 +1,45 @@
+name: "Resolve sprint tags"
+description: "Resolves, for every repository, the latest release tag of a sprint (release title contains '(<sprint>)'), or checks an explicit tag. Fails if a repository has no matching release."
+
+inputs:
+  token:
+    required: true
+    description: "GitHub App token or PAT with Contents: read on every repository"
+  org:
+    required: true
+    description: "GitHub organization name (for repositories given without owner)"
+  repositories:
+    required: true
+    description: "Comma or newline separated list, or JSON array, of repositories (name or owner/name)"
+  sprint:
+    required: false
+    default: ""
+    description: "Sprint title (e.g. Sprint 15). Required when tag is empty"
+  tag:
+    required: false
+    default: ""
+    description: "Explicit tag to deploy on every repository (overrides the sprint lookup)"
+
+outputs:
+  resolved_pairs:
+    description: "Multiline repo=tag list (repository short names)"
+    value: ${{ steps.resolve.outputs.resolved_pairs }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔧 Set up Node.js
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 🔍 Resolve tags
+      id: resolve
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        ORG: ${{ inputs.org }}
+        REPOSITORIES: ${{ inputs.repositories }}
+        SPRINT: ${{ inputs.sprint }}
+        TAG: ${{ inputs.tag }}
+      run: node "$GITHUB_ACTION_PATH/resolve-sprint-tags.js"
