@@ -1,0 +1,154 @@
+name: Manual deploy of a sprint
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Target environment: dev | qualif | recette"
+        required: true
+        type: string
+      sprint:
+        description: "Sprint title (e.g. Sprint 15): latest release of this sprint is deployed on each repository"
+        required: false
+        type: string
+        default: ""
+      tag:
+        description: "Explicit tag to deploy on every repository (overrides sprint)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: ✅ Validate and resolve tags
+    runs-on: ubuntu-latest
+    outputs:
+      runner_label: ${{ steps.env.outputs.runner_label }}
+      resolved_pairs: ${{ steps.tags.outputs.resolved_pairs }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: 🎯 Validate inputs
+        id: env
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          SPRINT: ${{ inputs.sprint }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          case "$ENVIRONMENT" in
+            dev|qualif|recette) echo "runner_label=srv-$ENVIRONMENT" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::Invalid environment '$ENVIRONMENT'. Allowed: dev|qualif|recette"; exit 1 ;;
+          esac
+          if [ -z "$SPRINT" ] && [ -z "$TAG" ]; then
+            echo "::error::Provide either 'sprint' (e.g. Sprint 15) or 'tag' (e.g. 0.14.0-rc)."
+            exit 1
+          fi
+          echo "🎯 Environment: $ENVIRONMENT"
+
+      - name: 🔐 Create GitHub App token
+        id: app
+        uses: avenirs-esr/avenirs-workflows/.github/actions/github-app-token@main
+        with:
+          app_id: ${{ secrets.GH_APP_ID }}
+          app_private_key: ${{ secrets.GH_APP_TOKEN }}
+          owner: ${{ vars.ORG }}
+
+      - name: 🔍 Resolve tags
+        id: tags
+        uses: avenirs-esr/avenirs-workflows/.github/actions/resolve-sprint-tags@main
+        with:
+          token: ${{ steps.app.outputs.app-token }}
+          org: ${{ vars.ORG }}
+          repositories: ${{ vars.DEPLOY_REPOSITORIES || vars.RELEASE_REPOSITORIES }}
+          sprint: ${{ inputs.sprint }}
+          tag: ${{ inputs.tag }}
+
+      - name: 🏷️ Get deployed version
+        id: version
+        env:
+          RESOLVED_PAIRS: ${{ steps.tags.outputs.resolved_pairs }}
+        run: echo "version=$(head -n1 <<< "$RESOLVED_PAIRS" | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: 🚀 Deploy on ${{ inputs.environment }}
+    needs: prepare
+    runs-on:
+      group: Default
+      labels:
+        - self-hosted
+        - ${{ needs.prepare.outputs.runner_label }}
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    timeout-minutes: 60
+    steps:
+      - name: 🚀 Update config, deploy and check
+        uses: avenirs-esr/avenirs-workflows/.github/actions/deploy-on-server@main
+        with:
+          srv_base_path: ${{ secrets.SRV_BASE_PATH }}
+          srv_deploy_cmd: ${{ secrets.SRV_DEPLOY_CMD }}
+          srv_update_deployment_cmd: ${{ secrets.SRV_UPDATE_DEPLOYMENT_CMD }}
+          jasypt_encryptor_password: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
+          java_version: ${{ vars.JAVA_VERSION }}
+          maven_version: ${{ vars.MAVEN_VERSION }}
+          conf_path: ${{ vars.CONF_PATH }}
+          conf_file: ${{ vars.CONF_FILE }}
+          resolved_pairs: ${{ needs.prepare.outputs.resolved_pairs }}
+          healthcheck_cmd: ${{ vars.SRV_HEALTHCHECK_CMD }}
+
+  notify:
+    name: 📣 Notify Rocket.Chat
+    needs: [prepare, deploy]
+    if: ${{ needs.deploy.result == 'success' && inputs.environment == 'recette' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📣 Send success notification
+        uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
+        with:
+          api-url: ${{ secrets.ROCKETCHAT_API_URL }}
+          auth-token: ${{ secrets.ROCKETCHAT_TOKEN }}
+          user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
+          channel: ${{ vars.ROCKET_CHAT_RECETTE_CHANNEL }}
+          message: |
+            🚀 【BOT】 Nouvelle version déployée en recette
+
+            La version ${{ needs.prepare.outputs.version }} vient d'être déployée sur l'environnement de recette.
+
+            🧪 Elle est disponible pour tests et validation.
+
+            🔗 Environnement : ${{ vars.RECETTE_COFOLIO_URL }}
+            📋 Version / livraison : ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.version }}
+
+            Merci de signaler les éventuelles anomalies rencontrées.
+
+  notify-status:
+    name: 🚀 Notify deployment status
+    needs: [prepare, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚀 Send Rocket.Chat notification
+        uses: avenirs-esr/avenirs-workflows/.github/actions/rocket-chat-notify@main
+        with:
+          api-url: ${{ secrets.ROCKETCHAT_API_URL }}
+          auth-token: ${{ secrets.ROCKETCHAT_TOKEN }}
+          user-id: ${{ secrets.ROCKETCHAT_USER_ID }}
+          channel: ${{ vars.ROCKET_CHAT_NOTIFICATION_CANAL }}
+          message: |
+            ${{
+              needs.deploy.result == 'success' &&
+              format('✅ 【BOT】 Déploiement réussi sur {0} : version {1}{2}', inputs.environment, needs.prepare.outputs.version, inputs.sprint != '' && format(' ({0})', inputs.sprint) || '') ||
+
+              needs.deploy.result == 'cancelled' &&
+              format('⚠️ 【BOT】 Déploiement annulé sur {0}', inputs.environment) ||
+
+              format('❌ 【BOT】 Déploiement échoué sur {0}', inputs.environment)
+            }}
+            ${{
+              needs.deploy.result != 'success' &&
+              format('🔎 Run: {0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) ||
+              ''
+            }}

@@ -29,7 +29,11 @@ inputs:
   tag_name:
     required: false
     default: ""
-    description: "Fallback tag if resolved_pairs is empty"
+    description: "Release tag that triggered the deployment (enables the config update, which needs resolved_pairs)"
+  healthcheck_cmd:
+    required: false
+    default: ""
+    description: "Optional command run in srv_base_path after the deployment; a non-zero exit fails the step"
   resolved_pairs:
     required: false
     default: ""
@@ -38,7 +42,13 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: 🛠️ Update config with logs
+    - name: 🔧 Set up Node.js
+      if: ${{ inputs.tag_name != '' || inputs.resolved_pairs != '' }}
+      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
+      with:
+        run-npm-command: "false"
+
+    - name: 🛠️ Update config
       if: ${{ inputs.tag_name != '' || inputs.resolved_pairs != '' }}
       shell: bash
       env:
@@ -46,66 +56,7 @@ runs:
         CONF_FILE: ${{ inputs.conf_file }}
         SRV_BASE_PATH: ${{ inputs.srv_base_path }}
         RESOLVED_PAIRS: ${{ inputs.resolved_pairs }}
-        TAG_NAME: ${{ inputs.tag_name }}
-      run: |
-        set -euo pipefail
-        if [ -z "${CONF_FILE:-}" ]; then
-          echo "::warning::CONF_FILE not provided, skipping update."
-          exit 0
-        fi
-
-        CONF_PATH="$CONF_FILE"
-        if [ -n "${CONF_DIR:-}" ]; then
-          CONF_PATH="$CONF_DIR/$CONF_FILE"
-        fi
-
-        if [ ! -f "$CONF_PATH" ]; then
-          echo "::warning::Config file not found: $CONF_PATH — nothing to update."
-          exit 0
-        fi
-
-        echo "::group::🧩 Process resolved_pairs"
-        PAIRS_STR="$(printf %s "$RESOLVED_PAIRS")"
-        if [ -z "$PAIRS_STR" ]; then
-          echo "::warning::RESOLVED_PAIRS is empty. Skipping update."
-          exit 0
-        fi
-
-        echo "➡️ Starting replacements for each repo=tag pair..."
-
-        while IFS='=' read -r repo tag; do
-          repo="${repo//$'\r'/}"
-          tag="${tag//$'\r'/}"
-          if [ -z "${repo:-}" ] || [ -z "${tag:-}" ]; then
-            echo "⚠️  Skipping empty line or invalid pair: '$repo' = '$tag'"
-            continue
-          fi
-
-          echo "--------------------------------------------------"
-          echo "🔸 Processing: repo='$repo', tag='$tag'"
-
-          esc_tag=$(printf '%s\n' "$tag" | sed 's/[\/&]/\\&/g')
-          key="services/avenirs-portfolio/${repo}"
-          echo "  ➜ Target key: $key"
-
-          grep -E "^ *${key} *=" "$CONF_PATH" && echo "  (Found line to update)" || echo "  (Key not found, will not update)"
-
-          sed -i -E "s|^([[:space:]]*)${key}([[:space:]]*)=([[:space:]]*).*$|\1${key} = ${esc_tag}|" "$CONF_PATH"
-
-          if grep -qE "^ *${key} *= *${esc_tag}" "$CONF_PATH"; then
-            echo "✅ Updated: ${key} = ${esc_tag}"
-          elif grep -qE "^ *${key} *=" "$CONF_PATH"; then
-            echo "⚠️  Found key but value unchanged (possible sed regex mismatch)"
-          else
-            echo "❌ Key not found: ${key}"
-          fi
-        done <<< "$RESOLVED_PAIRS"
-
-        echo "🧾 Final content of $CONF_PATH (for debug):"
-        echo "----------------------------------------"
-        cat "$CONF_PATH" | sed 's/^/  /'
-        echo "----------------------------------------"
-
+      run: node "$GITHUB_ACTION_PATH/update-conf.js"
 
     - name: 🚀 Run local deploy command
       shell: bash
@@ -133,3 +84,14 @@ runs:
         "$SRV_UPDATE_DEPLOYMENT_CMD" || { echo "::error::Update deployment command failed"; exit 20; }
         "$SRV_DEPLOY_CMD" || { echo "::error::Deploy command failed"; exit 30; }
         echo "✅ Deployment finished."
+
+    - name: 🩺 Post-deployment checks
+      if: ${{ inputs.healthcheck_cmd != '' }}
+      shell: bash
+      env:
+        SRV_BASE_PATH: ${{ inputs.srv_base_path }}
+        HEALTHCHECK_CMD: ${{ inputs.healthcheck_cmd }}
+      run: |
+        cd "$SRV_BASE_PATH" || { echo "::error::Base path not found"; exit 10; }
+        bash -c "$HEALTHCHECK_CMD" || { echo "::error::Post-deployment check failed"; exit 50; }
+        echo "✅ Post-deployment checks passed."
