@@ -1,5 +1,5 @@
 name: "Deploy on Server"
-description: "Deploy application on a remote server using SSH"
+description: "Deploy the application on the server hosting the self-hosted runner"
 
 inputs:
   srv_base_path:
@@ -20,20 +20,32 @@ inputs:
   maven_version:
     required: true
     description: "Maven version (e.g., 3.9.9)"
+  node_version:
+    required: false
+    default: "26"
+    description: "Node.js version installed with nvm on the server"
   conf_path:
     required: false
-    description: "Configuration file path (directory) on the server"
+    description: "Configuration directory, relative to srv_base_path. Used when resolved_pairs is set"
   conf_file:
     required: false
-    description: "Configuration file name"
+    description: "Configuration file name. Required when resolved_pairs is set"
   tag_name:
     required: false
     default: ""
-    description: "Release tag that triggered the deployment (enables the config update, which needs resolved_pairs)"
+    description: "Release tag that triggered the deployment (informational: the config update only depends on resolved_pairs)"
   healthcheck_cmd:
     required: false
     default: ""
     description: "Optional command run in srv_base_path after the deployment; a non-zero exit fails the step"
+  healthcheck_retries:
+    required: false
+    default: "5"
+    description: "Number of healthcheck attempts"
+  healthcheck_interval:
+    required: false
+    default: "10"
+    description: "Seconds between two healthcheck attempts"
   resolved_pairs:
     required: false
     default: ""
@@ -42,23 +54,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: 🔧 Set up Node.js
-      if: ${{ inputs.tag_name != '' || inputs.resolved_pairs != '' }}
-      uses: avenirs-esr/avenirs-workflows/.github/actions/setup-node@main
-      with:
-        run-npm-command: "false"
-
-    - name: 🛠️ Update config
-      if: ${{ inputs.tag_name != '' || inputs.resolved_pairs != '' }}
-      shell: bash
-      env:
-        CONF_DIR: ${{ inputs.conf_path }}
-        CONF_FILE: ${{ inputs.conf_file }}
-        SRV_BASE_PATH: ${{ inputs.srv_base_path }}
-        RESOLVED_PAIRS: ${{ inputs.resolved_pairs }}
-      run: node "$GITHUB_ACTION_PATH/update-conf.js"
-
-    - name: 🚀 Run local deploy command
+    - name: 🚀 Update config and deploy
       shell: bash
       env:
         SRV_BASE_PATH: ${{ inputs.srv_base_path }}
@@ -66,21 +62,38 @@ runs:
         SRV_UPDATE_DEPLOYMENT_CMD: ${{ inputs.srv_update_deployment_cmd }}
         JAVA_VERSION: ${{ inputs.java_version }}
         MAVEN_VERSION: ${{ inputs.maven_version }}
+        NODE_VERSION: ${{ inputs.node_version }}
         JASYPT: ${{ inputs.jasypt_encryptor_password }}
+        CONF_DIR: ${{ inputs.conf_path }}
+        CONF_FILE: ${{ inputs.conf_file }}
+        RESOLVED_PAIRS: ${{ inputs.resolved_pairs }}
       run: |
+        # 1. Toolchain: check that every tool is available before changing the server config
         export SDKMAN_DIR="$HOME/.sdkman"
-        [ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ] && . "$SDKMAN_DIR/bin/sdkman-init.sh"
-        export JAVA_HOME="$(sdk home java "$JAVA_VERSION")"
-        export M2_HOME="$(sdk home maven "$MAVEN_VERSION")"
-        export PATH="$JAVA_HOME/bin:$M2_HOME/bin:$PATH"
-        export JASYPT_ENCRYPTOR_PASSWORD="$JASYPT"
+        [ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ] || { echo "::error::SDKMAN not found in $SDKMAN_DIR"; exit 40; }
+        . "$SDKMAN_DIR/bin/sdkman-init.sh"
+        JAVA_HOME="$(sdk home java "$JAVA_VERSION")" && [ -d "$JAVA_HOME" ] || { echo "::error::Java $JAVA_VERSION is not installed"; exit 41; }
+        M2_HOME="$(sdk home maven "$MAVEN_VERSION")" && [ -d "$M2_HOME" ] || { echo "::error::Maven $MAVEN_VERSION is not installed"; exit 42; }
+        export JAVA_HOME M2_HOME PATH="$JAVA_HOME/bin:$M2_HOME/bin:$PATH"
 
         export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-        nvm install 26 || { echo "::error::Node.js 26 installation failed"; exit 40; }
-        nvm use 26 || { echo "::error::Node.js 26 activation failed"; exit 41; }
+        [ -s "$NVM_DIR/nvm.sh" ] || { echo "::error::nvm not found in $NVM_DIR"; exit 43; }
+        . "$NVM_DIR/nvm.sh"
+        nvm install "$NODE_VERSION" || { echo "::error::Node.js $NODE_VERSION installation failed"; exit 44; }
+        nvm use "$NODE_VERSION" || { echo "::error::Node.js $NODE_VERSION activation failed"; exit 45; }
 
-        cd "$SRV_BASE_PATH" || { echo "::error::Base path not found"; exit 10; }
+        [ -d "$SRV_BASE_PATH" ] || { echo "::error::Base path not found"; exit 10; }
+
+        # 2. Config: only updated once the toolchain is validated
+        if [ -n "$RESOLVED_PAIRS" ]; then
+          node "$GITHUB_ACTION_PATH/update-conf.js" || exit 15
+        else
+          echo "ℹ️ No resolved_pairs: server config left untouched."
+        fi
+
+        # 3. Deployment
+        cd "$SRV_BASE_PATH"
+        export JASYPT_ENCRYPTOR_PASSWORD="$JASYPT"
         "$SRV_UPDATE_DEPLOYMENT_CMD" || { echo "::error::Update deployment command failed"; exit 20; }
         "$SRV_DEPLOY_CMD" || { echo "::error::Deploy command failed"; exit 30; }
         echo "✅ Deployment finished."
@@ -91,7 +104,17 @@ runs:
       env:
         SRV_BASE_PATH: ${{ inputs.srv_base_path }}
         HEALTHCHECK_CMD: ${{ inputs.healthcheck_cmd }}
+        HEALTHCHECK_RETRIES: ${{ inputs.healthcheck_retries }}
+        HEALTHCHECK_INTERVAL: ${{ inputs.healthcheck_interval }}
       run: |
         cd "$SRV_BASE_PATH" || { echo "::error::Base path not found"; exit 10; }
-        bash -c "$HEALTHCHECK_CMD" || { echo "::error::Post-deployment check failed"; exit 50; }
-        echo "✅ Post-deployment checks passed."
+        for attempt in $(seq 1 "$HEALTHCHECK_RETRIES"); do
+          if timeout 60 bash -c "$HEALTHCHECK_CMD"; then
+            echo "✅ Post-deployment checks passed."
+            exit 0
+          fi
+          echo "⏳ Healthcheck attempt $attempt/$HEALTHCHECK_RETRIES failed"
+          if [ "$attempt" -lt "$HEALTHCHECK_RETRIES" ]; then sleep "$HEALTHCHECK_INTERVAL"; fi
+        done
+        echo "::error::Post-deployment check failed after $HEALTHCHECK_RETRIES attempt(s)"
+        exit 50

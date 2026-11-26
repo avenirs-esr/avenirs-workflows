@@ -17,6 +17,25 @@ on:
         required: false
         type: string
         default: ""
+    secrets:
+      GH_APP_ID:
+        required: true
+      GH_APP_TOKEN:
+        required: true
+      SRV_BASE_PATH:
+        required: true
+      SRV_DEPLOY_CMD:
+        required: true
+      SRV_UPDATE_DEPLOYMENT_CMD:
+        required: true
+      JASYPT_ENCRYPTOR_PASSWORD:
+        required: true
+      ROCKETCHAT_API_URL:
+        required: true
+      ROCKETCHAT_TOKEN:
+        required: true
+      ROCKETCHAT_USER_ID:
+        required: true
 
 permissions:
   contents: read
@@ -69,7 +88,12 @@ jobs:
         id: version
         env:
           RESOLVED_PAIRS: ${{ steps.tags.outputs.resolved_pairs }}
-        run: echo "version=$(head -n1 <<< "$RESOLVED_PAIRS" | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+        run: |
+          version="$(head -n1 <<< "$RESOLVED_PAIRS" | cut -d= -f2-)"
+          if [ "$(cut -d= -f2- <<< "$RESOLVED_PAIRS" | sort -u | wc -l)" -gt 1 ]; then
+            echo "::warning::Repositories resolved to different tags: notifications only show $version (see the job summary)"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
   deploy:
     name: 🚀 Deploy on ${{ inputs.environment }}
@@ -140,10 +164,13 @@ jobs:
           message: |
             ${{
               needs.deploy.result == 'success' &&
-              format('✅ 【BOT】 Déploiement réussi sur {0} : version {1}{2}', inputs.environment, needs.prepare.outputs.version, inputs.sprint != '' && format(' ({0})', inputs.sprint) || '') ||
+              format('✅ 【BOT】 Déploiement réussi sur {0} : version {1}{2}', inputs.environment, needs.prepare.outputs.version, inputs.tag == '' && format(' ({0})', inputs.sprint) || '') ||
 
               needs.deploy.result == 'cancelled' &&
               format('⚠️ 【BOT】 Déploiement annulé sur {0}', inputs.environment) ||
+
+              needs.deploy.result == 'skipped' &&
+              format('⛔ 【BOT】 Déploiement non lancé sur {0} : échec ou annulation de la préparation (validation, résolution des tags)', inputs.environment) ||
 
               format('❌ 【BOT】 Déploiement échoué sur {0}', inputs.environment)
             }}
