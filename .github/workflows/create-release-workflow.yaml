@@ -63,6 +63,8 @@ jobs:
           SPRINT: ${{ inputs.sprint }}
           ISSUES_JSON: ${{ steps.us.outputs.issues_json }}
           ISSUE_TYPES: ${{ vars.US_ISSUE_TYPE }}
+          ISSUE_COUNT: ${{ steps.us.outputs.count }}
+          SELECTED_STATUSES: In Review, Recette, Done
         run: |
           if [ "${{ steps.us.outputs.should_run }}" != "true" ]; then
             echo "::error::No matching issues found for sprint $SPRINT, nothing created."
@@ -71,6 +73,9 @@ jobs:
           delimiter="EOF_$(date +%s%N)_$RANDOM"
           {
             echo "markdown<<$delimiter"
+            echo "## $SPRINT"
+            echo
+            printf 'Cette release regroupe %s élément(s) du sprint `%s`, sélectionnés avec les statuts `%s`.\n\n' "$ISSUE_COUNT" "$SPRINT" "$SELECTED_STATUSES"
             while IFS= read -r issue_type; do
               issue_type="${issue_type#"${issue_type%%[![:space:]]*}"}"
               issue_type="${issue_type%"${issue_type##*[![:space:]]}"}"
