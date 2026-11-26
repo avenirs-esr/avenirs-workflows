@@ -62,17 +62,28 @@ jobs:
         env:
           SPRINT: ${{ inputs.sprint }}
           ISSUES_JSON: ${{ steps.us.outputs.issues_json }}
+          ISSUE_TYPES: ${{ vars.US_ISSUE_TYPE }}
         run: |
           if [ "${{ steps.us.outputs.should_run }}" != "true" ]; then
-            echo "::error::No US found for sprint $SPRINT, nothing created."
+            echo "::error::No matching issues found for sprint $SPRINT, nothing created."
             exit 1
           fi
+          delimiter="EOF_$(date +%s%N)_$RANDOM"
           {
-            echo "markdown<<EOF"
-            echo "List of US selected for ${SPRINT,,} :"
-            echo
-            jq -r '.[] | "- [US#\(.number)](\(.url))"' <<< "$ISSUES_JSON"
-            echo "EOF"
+            echo "markdown<<$delimiter"
+            while IFS= read -r issue_type; do
+              issue_type="${issue_type#"${issue_type%%[![:space:]]*}"}"
+              issue_type="${issue_type%"${issue_type##*[![:space:]]}"}"
+              [ -z "$issue_type" ] && continue
+
+              issues=$(jq --arg issue_type "$issue_type" '[.[] | select(.issue_type == $issue_type)]' <<< "$ISSUES_JSON")
+              [ "$issues" = "[]" ] && continue
+
+              echo "### $issue_type"
+              jq -r '.[] | "- [#\(.number)](\(.url)) - \(.title | gsub("[\\r\\n]+"; " "))"' <<< "$issues"
+              echo
+            done < <(tr ',' '\n' <<< "$ISSUE_TYPES")
+            echo "$delimiter"
           } >> "$GITHUB_OUTPUT"
 
       - name: 🏷️ Create tags and releases
