@@ -11,19 +11,30 @@ function parseRepositories(raw, org) {
   ];
 }
 
+async function listReleases(token, repository) {
+  const releases = [];
+  for (let page = 1; ; page++) {
+    const batch = await restGet(token, `https://api.github.com/repos/${repository}/releases?per_page=100&page=${page}`, options);
+    if (batch === null) throw new Error("repository not found or not accessible with this token");
+    releases.push(...batch);
+    if (batch.length < 100) return releases;
+  }
+}
+
 async function resolveFromSprint(token, repository, sprint) {
   const needle = `(${sprint})`.toLowerCase();
-  const releases = (await restGet(token, `https://api.github.com/repos/${repository}/releases?per_page=100`, options)) ?? [];
+  const releases = await listReleases(token, repository);
+  const publishedAt = (release) => new Date(release.published_at ?? release.created_at);
   const matches = releases
     .filter((release) => !release.draft && (release.name ?? "").toLowerCase().includes(needle))
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    .sort((a, b) => publishedAt(b) - publishedAt(a));
   if (matches.length === 0) throw new Error(`no release titled "...${needle}" found`);
   return matches[0].tag_name;
 }
 
 async function checkExplicitTag(token, repository, tag) {
   const ref = await restGet(token, `https://api.github.com/repos/${repository}/git/ref/tags/${encodeURIComponent(tag)}`, options);
-  if (!ref) throw new Error(`tag "${tag}" not found`);
+  if (!ref) throw new Error(`tag "${tag}" not found (or repository not accessible with this token)`);
   return tag;
 }
 
@@ -34,6 +45,9 @@ async function checkExplicitTag(token, repository, tag) {
   const explicitTag = (process.env.TAG || "").trim();
 
   if (!sprint && !explicitTag) throw new Error("Either sprint or tag must be provided.");
+  if (sprint && explicitTag) {
+    console.log(`::warning::Both sprint and tag provided: using tag "${explicitTag}", ignoring sprint "${sprint}".`);
+  }
 
   const repositories = parseRepositories(reqEnv("REPOSITORIES"), org);
   console.log(`ℹ️ Repositories: ${repositories.join(", ")}`);
@@ -47,6 +61,7 @@ async function checkExplicitTag(token, repository, tag) {
       const tag = explicitTag
         ? await checkExplicitTag(token, repository, explicitTag)
         : await resolveFromSprint(token, repository, sprint);
+      if (!/^[\w.+\/-]+$/.test(tag)) throw new Error(`unexpected tag format "${tag}"`);
       pairs.push(`${repository.split("/").pop()}=${tag}`);
       console.log(`✅ ${repository} → ${tag}`);
     } catch (error) {
