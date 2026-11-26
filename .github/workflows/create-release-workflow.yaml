@@ -65,6 +65,8 @@ jobs:
           ISSUE_TYPES: ${{ vars.US_ISSUE_TYPE }}
           ISSUE_COUNT: ${{ steps.us.outputs.count }}
           SELECTED_STATUSES: In Review, Recette, Done
+          ORG: ${{ vars.ORG }}
+          PROJECT_NUMBER: ${{ vars.COFOLIO_PROJECT_NUMBER }}
         run: |
           if [ "${{ steps.us.outputs.should_run }}" != "true" ]; then
             echo "::error::No matching issues found for sprint $SPRINT, nothing created."
@@ -88,6 +90,8 @@ jobs:
               jq -r '.[] | "- [#\(.number)](\(.url)) - \(.title | gsub("[\\r\\n]+"; " "))"' <<< "$issues"
               echo
             done < <(tr ',' '\n' <<< "$ISSUE_TYPES")
+            echo "### Ressources"
+            echo "- [Tableau de suivi du sprint](https://github.com/orgs/$ORG/projects/$PROJECT_NUMBER)"
             echo "$delimiter"
           } >> "$GITHUB_OUTPUT"
 
