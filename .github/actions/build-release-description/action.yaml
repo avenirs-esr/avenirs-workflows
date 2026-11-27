@@ -1,0 +1,77 @@
+name: "Build release description"
+description: "Builds the markdown description of the primary repository release from a list of sprint issues"
+
+inputs:
+  sprint:
+    required: true
+    description: "Sprint title (e.g. Sprint 15)"
+  issues_json:
+    required: true
+    description: "JSON array of issues (number, title, url, issue_type)"
+  issue_types:
+    required: true
+    description: "Comma separated issue types, defining the section order"
+  issue_count:
+    required: true
+    description: "Number of selected issues"
+  should_run:
+    required: true
+    description: "Output should_run of get-issues-in-column; the action fails when it is not 'true'"
+  selected_statuses:
+    required: false
+    default: "In Review, Recette, Done"
+    description: "Statuses displayed in the description"
+  org:
+    required: true
+    description: "GitHub organization name"
+  project_number:
+    required: true
+    description: "Project V2 number used for the sprint board link"
+
+outputs:
+  markdown:
+    description: "Release description in markdown"
+    value: ${{ steps.build.outputs.markdown }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 📝 Build release description
+      id: build
+      shell: bash
+      env:
+        SPRINT: ${{ inputs.sprint }}
+        ISSUES_JSON: ${{ inputs.issues_json }}
+        ISSUE_TYPES: ${{ inputs.issue_types }}
+        ISSUE_COUNT: ${{ inputs.issue_count }}
+        SHOULD_RUN: ${{ inputs.should_run }}
+        SELECTED_STATUSES: ${{ inputs.selected_statuses }}
+        ORG: ${{ inputs.org }}
+        PROJECT_NUMBER: ${{ inputs.project_number }}
+      run: |
+        if [ "$SHOULD_RUN" != "true" ]; then
+          echo "::error::No matching issues found for sprint $SPRINT, nothing created."
+          exit 1
+        fi
+        delimiter="EOF_$(date +%s%N)_$RANDOM"
+        {
+          echo "markdown<<$delimiter"
+          echo "## $SPRINT"
+          echo
+          printf 'Cette release regroupe %s élément(s) du sprint `%s`, sélectionnés avec les statuts `%s`.\n\n' "$ISSUE_COUNT" "$SPRINT" "$SELECTED_STATUSES"
+          while IFS= read -r issue_type; do
+            issue_type="${issue_type#"${issue_type%%[![:space:]]*}"}"
+            issue_type="${issue_type%"${issue_type##*[![:space:]]}"}"
+            [ -z "$issue_type" ] && continue
+
+            issues=$(jq --arg issue_type "$issue_type" '[.[] | select(.issue_type == $issue_type)]' <<< "$ISSUES_JSON")
+            [ "$issues" = "[]" ] && continue
+
+            echo "### $issue_type"
+            jq -r '.[] | "- [#\(.number)](\(.url)) - \(.title | gsub("[\r\n]+"; " "))"' <<< "$issues"
+            echo
+          done < <(tr ',' '\n' <<< "$ISSUE_TYPES")
+          echo "### Ressources"
+          echo "- [Tableau de suivi du sprint](https://github.com/orgs/$ORG/projects/$PROJECT_NUMBER)"
+          echo "$delimiter"
+        } >> "$GITHUB_OUTPUT"
