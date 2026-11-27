@@ -59,41 +59,15 @@ jobs:
       - name: 📝 Build release description
         id: body
         if: ${{ inputs.include_sprint_us }}
-        env:
-          SPRINT: ${{ inputs.sprint }}
-          ISSUES_JSON: ${{ steps.us.outputs.issues_json }}
-          ISSUE_TYPES: ${{ vars.US_ISSUE_TYPE }}
-          ISSUE_COUNT: ${{ steps.us.outputs.count }}
-          SELECTED_STATUSES: In Review, Recette, Done
-          ORG: ${{ vars.ORG }}
-          PROJECT_NUMBER: ${{ vars.COFOLIO_PROJECT_NUMBER }}
-        run: |
-          if [ "${{ steps.us.outputs.should_run }}" != "true" ]; then
-            echo "::error::No matching issues found for sprint $SPRINT, nothing created."
-            exit 1
-          fi
-          delimiter="EOF_$(date +%s%N)_$RANDOM"
-          {
-            echo "markdown<<$delimiter"
-            echo "## $SPRINT"
-            echo
-            printf 'Cette release regroupe %s élément(s) du sprint `%s`, sélectionnés avec les statuts `%s`.\n\n' "$ISSUE_COUNT" "$SPRINT" "$SELECTED_STATUSES"
-            while IFS= read -r issue_type; do
-              issue_type="${issue_type#"${issue_type%%[![:space:]]*}"}"
-              issue_type="${issue_type%"${issue_type##*[![:space:]]}"}"
-              [ -z "$issue_type" ] && continue
-
-              issues=$(jq --arg issue_type "$issue_type" '[.[] | select(.issue_type == $issue_type)]' <<< "$ISSUES_JSON")
-              [ "$issues" = "[]" ] && continue
-
-              echo "### $issue_type"
-              jq -r '.[] | "- [#\(.number)](\(.url)) - \(.title | gsub("[\\r\\n]+"; " "))"' <<< "$issues"
-              echo
-            done < <(tr ',' '\n' <<< "$ISSUE_TYPES")
-            echo "### Ressources"
-            echo "- [Tableau de suivi du sprint](https://github.com/orgs/$ORG/projects/$PROJECT_NUMBER)"
-            echo "$delimiter"
-          } >> "$GITHUB_OUTPUT"
+        uses: avenirs-esr/avenirs-workflows/.github/actions/build-release-description@main
+        with:
+          sprint: ${{ inputs.sprint }}
+          issues_json: ${{ steps.us.outputs.issues_json }}
+          issue_types: ${{ vars.US_ISSUE_TYPE }}
+          issue_count: ${{ steps.us.outputs.count }}
+          should_run: ${{ steps.us.outputs.should_run }}
+          org: ${{ vars.ORG }}
+          project_number: ${{ vars.COFOLIO_PROJECT_NUMBER }}
 
       - name: 🏷️ Create tags and releases
         uses: avenirs-esr/avenirs-workflows/.github/actions/create-release-on-repositories@main
